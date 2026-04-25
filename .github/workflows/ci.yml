@@ -12,49 +12,60 @@ on:
       - develop
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: smart-university-pipeline
+  cancel-in-progress: true
+
 env:
   PYTHON_VERSION: "3.11"
   NODE_VERSION: "18"
 
+####################################################
+# BACKEND TEST / LINT
+####################################################
 jobs:
 
-  ############################################
-  # BACKEND TEST/LINT
-  ############################################
   backend:
     name: Backend Tests & Lint
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - uses: actions/cache@v4
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: backend-${{ hashFiles('backend/requirements.txt') }}
 
-      - name: Install backend dependencies
+      - name: Install dependencies
         run: |
           pip install -r requirements.txt
           pip install black isort flake8 pytest pytest-django coverage
 
-      - name: Code Format (Black/Isort)
+      - name: Check code formatting
         run: |
           black --check .
           isort --check-only .
 
       - name: Lint backend
-        run: |
-          flake8 .
+        run: flake8 .
 
-      - name: Run backend tests w/ coverage
+      - name: Run backend tests with coverage
         run: |
           coverage run -m pytest
           coverage xml
@@ -65,64 +76,75 @@ jobs:
           name: backend-coverage
           path: backend/coverage.xml
 
-  ############################################
-  # FRONTEND TEST/LINT
-  ############################################
+
+####################################################
+# FRONTEND TEST / LINT
+####################################################
+
   frontend:
     name: Frontend Tests & Lint
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install Frontend Packages
+      - name: Install dependencies
         run: npm ci
 
-      - name: Lint Frontend
+      - name: Lint frontend
         run: npm run lint --if-present
 
-      - name: Run Frontend Tests
+      - name: Run frontend tests
         env:
           CI: true
         run: npm test -- --watchAll=false
 
-  ############################################
-  # AI SERVICE TEST/LINT
-  ############################################
+
+####################################################
+# AI SERVICE TEST / LINT
+####################################################
+
   ai_service:
     name: AI Service Tests & Lint
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: ai-service
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - uses: actions/cache@v4
+      - name: Cache pip
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ai-${{ hashFiles('ai-service/requirements.txt') }}
 
-      - name: Install deps
+      - name: Install dependencies
         run: |
           pip install -r requirements.txt
           pip install black isort flake8 pytest coverage
 
-      - name: Code Format
+      - name: Check formatting
         run: |
           black --check .
           isort --check-only .
@@ -130,7 +152,7 @@ jobs:
       - name: Lint AI service
         run: flake8 .
 
-      - name: Run AI tests w/ coverage
+      - name: Run tests with coverage
         run: |
           coverage run -m pytest
           coverage xml
@@ -141,16 +163,21 @@ jobs:
           name: ai-coverage
           path: ai-service/coverage.xml
 
-  ############################################
-  # DOCKER BUILD + PUSH TO GHCR
-  ############################################
+
+####################################################
+# DOCKER BUILD & PUSH
+####################################################
+
   docker:
     name: Docker Build & Publish
     runs-on: ubuntu-latest
     needs: [backend, frontend, ai_service]
 
+    if: github.ref == 'refs/heads/main'
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -159,33 +186,41 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Buildx
+      - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Backend Image
-        run: |
-          docker build -t ghcr.io/${{ github.repository }}/backend:latest backend
+      - name: Build & Push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ghcr.io/${{ github.repository }}/backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Build Frontend Image
-        run: |
-          docker build -t ghcr.io/${{ github.repository }}/frontend:latest frontend
+      - name: Build & Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ghcr.io/${{ github.repository }}/frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Build AI Service Image
-        run: |
-          docker build -t ghcr.io/${{ github.repository }}/ai-service:latest ai-service
+      - name: Build & Push AI Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./ai-service
+          push: true
+          tags: ghcr.io/${{ github.repository }}/ai-service:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Push Docker Images
-        run: |
-          docker push ghcr.io/${{ github.repository }}/backend:latest
-          docker push ghcr.io/${{ github.repository }}/frontend:latest
-          docker push ghcr.io/${{ github.repository }}/ai-service:latest
 
-  ############################################
-  # DEPLOYMENT 
-  ############################################
+####################################################
+# DEPLOY TO VPS
+####################################################
+
   deploy:
     name: Production Deployment
     runs-on: ubuntu-latest
@@ -203,4 +238,4 @@ jobs:
           script: |
             cd /apps/smart-university/
             docker compose pull
-            docker compose up -d --build
+            docker compose up -d
