@@ -1,0 +1,103 @@
+############################################################
+# GLOBAL OS
+############################################################
+.DS_Store
+Thumbs.db
+
+############################################################
+# PYTHON (Backend + AI Service)
+############################################################
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.env/
+*.env
+.env.local
+backend/.venv/
+ai-service/.venv/
+
+# Python cache / logs
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Django
+backend/staticfiles/
+backend/media/
+backend/db.sqlite3
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+
+############################################################
+# NODE / REACT (Frontend)
+############################################################
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+package-lock.json
+.pnp/
+.pnp.js
+
+# React build output
+frontend/build/
+frontend/.cache/
+
+############################################################
+# EDITOR / IDE
+############################################################
+.vscode/
+.idea/
+*.swp
+*.swo
+
+############################################################
+# DOCKER
+############################################################
+docker-compose.override.yml
+docker-data/
+*.tar
+
+############################################################
+# GIT / CI
+############################################################
+*.orig
+*.patch
+.coverage
+coverage.xml
+coverage/
+
+############################################################
+# AI Model Files
+############################################################
+ai-service/model/*.h5
+ai-service/model/*.pkl
+ai-service/model/*.tflite
+ai-service/model/checkpoints/
+ai-service/model/*.pt
+
+############################################################
+# NGINX
+############################################################
+nginx/*.log
+
+############################################################
+# MISC
+############################################################
+*.tmp
+*.bak
+*.backup
+*.cache
+logs/
+temp/
+uploads/
