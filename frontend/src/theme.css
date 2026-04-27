@@ -1,0 +1,25 @@
+/* --- Global Theme (Light) --- */
+:root {
+  --color-primary: #6366f1;
+  --color-primary-light: #818cf8;
+  --color-primary-dark: #4f46e5;
+
+  --color-bg: #0f0f11;
+  --color-surface: #18181b;
+  --color-text: #e4e4e7;
+  --color-text-muted: #a1a1aa;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.12);
+  --shadow-strong: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.dark {
+  --color-bg: #050505;
+  --color-surface: #111113;
+  --color-text: #f4f4f5;
+  --color-text-muted: #a1a1aa;
+}

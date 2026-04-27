@@ -1,0 +1,21 @@
+@import "./theme.css";
+@import "tailwindcss";
+
+@theme {
+  /* colors */
+  --color-primary: var(--color-primary);
+  --color-background: var(--color-bg);
+  --color-surface: var(--color-surface);
+
+  --color-foreground: var(--color-text);
+  --color-muted-foreground: var(--color-text-muted);
+
+  /* radius */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+
+  /* shadows */
+  --shadow-soft: var(--shadow-soft);
+  --shadow-strong: var(--shadow-strong);
+}
