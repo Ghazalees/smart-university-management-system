@@ -36,14 +36,6 @@ This project integrates a **React** frontend, a **Django** backend, an AI servic
 
 ## 🏗️ Architecture
 
-```mermaid
-graph TD
-    Client([Client / Browser]) -->|HTTP Requests| Nginx[Nginx Reverse Proxy]
-    Nginx -->|Route /| Frontend[Frontend: React]
-    Nginx -->|Route /api/| Backend[Backend: Django]
-    Nginx -->|Route /ai/| AI[AI Service: FastAPI]
-```
-
 **High-Level Flow:**
 1. Users access the system via **Nginx**.
 2. The **Frontend** serves the UI components.
