@@ -36,6 +36,7 @@ This project integrates a **React** frontend, a **Django** backend, an AI servic
 
 ## 🏗️ Architecture
 
+```mermaid
 graph TD
     Client([Client / Browser]) -->|HTTP Requests| Nginx[Nginx Reverse Proxy]
     Nginx -->|Route /| Frontend[Frontend: React]
@@ -48,6 +49,8 @@ graph TD
 3. The **Backend** processes operational data and university management tasks.
 4. The **AI Service** handles specialized machine learning workloads independently.
 ```
+
+---
 
 ## 💻 Tech Stack
 
