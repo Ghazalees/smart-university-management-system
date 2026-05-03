@@ -49,8 +49,6 @@ graph TD
 4. The **AI Service** handles specialized machine learning workloads independently.
 ```
 
----
-
 ## 💻 Tech Stack
 
 | Category | Technologies |
