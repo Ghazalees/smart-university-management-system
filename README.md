@@ -87,35 +87,38 @@ This is the fastest and most reliable way to launch the entire ecosystem.
 <details>
 <summary><strong>🖥️ Setup Frontend</strong></summary>
 
-bash
+   ```bash
 cd frontend
 npm install
 npm start
+   ```
 
 </details>
 
 <details>
 <summary><strong>⚙️ Setup Backend</strong></summary>
 
-bash
+   ```bash
 cd backend
 python -m venv venv
 source venv/bin/activate # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py runserver
+   ```
 
 </details>
 
 <details>
 <summary><strong>🧠 Setup AI Service</strong></summary>
 
-bash
+   ```bash
 cd ai-service
 python -m venv venv
 source venv/bin/activate # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn api.main:app --host 0.0.0.0 --port 9000
+   ```
 
 </details>
 
@@ -125,7 +128,6 @@ uvicorn api.main:app --host 0.0.0.0 --port 9000
 
 The backend requires an environment file to run securely. Create a `.env` file in the `backend/` directory:
 
-env
 # backend/.env
 DEBUG=True
 SECRET_KEY=your-super-secret-key
@@ -162,4 +164,3 @@ This repository uses **GitHub Actions** to enforce code quality and automate bui
 **Course:** Advanced Software Engineering  
 **Professor:** Dr. Lotfi  
 **University:** Tarbiat Modares University
-
