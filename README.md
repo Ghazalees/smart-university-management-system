@@ -1,4 +1,3 @@
-```markdown
 # 🎓 Smart University Management System
 
 > A modern, multi-service university management platform built with a microservice-oriented architecture.
@@ -37,7 +36,6 @@ This project integrates a **React** frontend, a **Django** backend, an AI servic
 
 ## 🏗️ Architecture
 
-```mermaid
 graph TD
     Client([Client / Browser]) -->|HTTP Requests| Nginx[Nginx Reverse Proxy]
     Nginx -->|Route /| Frontend[Frontend: React]
@@ -173,4 +171,3 @@ This repository uses **GitHub Actions** to enforce code quality and automate bui
 **Professor:** Dr. Lotfi  
 **University:** Tarbiat Modares University
 
-```
