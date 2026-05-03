@@ -42,14 +42,13 @@ graph TD
     Nginx -->|Route /| Frontend[Frontend: React]
     Nginx -->|Route /api/| Backend[Backend: Django]
     Nginx -->|Route /ai/| AI[AI Service: FastAPI]
+```
 
 **High-Level Flow:**
 1. Users access the system via **Nginx**.
 2. The **Frontend** serves the UI components.
 3. The **Backend** processes operational data and university management tasks.
 4. The **AI Service** handles specialized machine learning workloads independently.
-```
-
 ---
 
 ## 💻 Tech Stack
