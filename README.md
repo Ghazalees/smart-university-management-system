@@ -1,287 +1,175 @@
-# Smart University Management System
-**AI‑Powered Academic Support & University Workflow Automation Platform**
+# 🎓 Smart University Management System
 
-A smart, modular, scalable university management system designed to provide **AI‑driven support**, **automated workflows**, and **centralized rule management** for students, professors, administrative staff, and university managers.
+> A modern, multi-service university management platform built with a microservice-oriented architecture.
 
----
+![React](https://img.shields.io/badge/Frontend-React-blue?logo=react)
+![Django](https://img.shields.io/badge/Backend-Django-092E20?logo=django)
+![FastAPI](https://img.shields.io/badge/AI_Service-FastAPI-009688?logo=fastapi)
+![Docker](https://img.shields.io/badge/DevOps-Docker-2496ED?logo=docker)
 
-# 📌 Overview
-
-Modern universities face common challenges:
-
-- Information scattered across multiple systems
-- Slow responses to questions (sometimes **24+ hours**)
-- Difficulty accessing rules and regulations
-- Repetitive administrative tasks
-- Limited transparency and monitoring
-- Inefficient communication between departments
-
-The **Smart University Management System (SUMS)** solves these by combining:
-
-- Large Language Models (LLM)
-- Automated workflow processing
-- Centralized rule management
-- Scalable API-driven backend
-- Modern frontend UI/UX
-- Full observability via ELK
-- Automated deployment with CI/CD
+This project integrates a **React** frontend, a **Django** backend, an AI service powered by **FastAPI**, and an **Nginx** reverse proxy for seamless service orchestration.
 
 ---
 
-# 🎯 Project Objectives
+## 📑 Table of Contents
 
-- Provide **instant, accurate answers** to university-related questions
-- Automate academic & administrative workflows
-- Centralize and digitize university regulations
-- Improve communication and transparency
-- Reduce workload for administrative staff
-- Enable scalable, secure, maintainable university systems
-- Fully integrate modern AI capabilities inside university operations
-
----
-
-# 👥 Target Users
-
-The system supports multiple user classes:
-
-- Students
-- Professors
-- Administrative Staff
-- University Managers / System Admins
-
-Each role receives **custom access, features, and permissions**.
+- [Overview](#-overview)
+- [Architecture](#-architecture)
+- [Tech Stack](#-tech-stack)
+- [Project Structure](#-project-structure)
+- [Getting Started (Setup)](#-getting-started--setup)
+- [Environment Variables](#-environment-variables)
+- [CI/CD & Testing](#-cicd--testing)
+- [Team & Acknowledgments](#-team--acknowledgments)
 
 ---
 
-# ✨ Key Features
+## 📖 Overview
 
-## Student & Professor Features
+**Smart University Management System** is a fully containerized full-stack application designed to support core university operations using scalable, independent services:
 
-- User registration & login
-- AI-powered question answering (university rules, academic processes, deadlines)
-- Access to regulations & FAQs
-- Course schedule and academic data
-- Submitting administrative requests
-
----
-
-## Workflow Automation
-
-The system supports intelligent automated processing for:
-
-- Leave requests
-- Certificate issuance
-- Tuition discount requests
-- Academic/administrative approvals
-- Multi-step workflow routing
-- Status tracking & notifications
-
-Workflows are **rule-driven and customizable by admins without editing code**.
+- 🖥️ **Frontend**: React-based intuitive user interface.
+- ⚙️ **Backend**: Django application handling core business logic and APIs.
+- 🧠 **AI Service**: FastAPI-based microservice for smart, ML-driven capabilities.
+- 🔀 **Nginx**: Reverse proxy to route client requests securely and efficiently.
 
 ---
 
-## System Administration
+## 🏗️ Architecture
 
-- Admin dashboard
-- Rule, policy & workflow editor
-- User access control
-- Monitoring panels (via ELK)
-- Reporting & analytics
-- AI fine-tuning and dataset management
+**High-Level Flow:**
 
----
-
-# System Architecture
-
-A scalable multi-layer architecture:
-frontend → backend → ai-service → database
-
-↓
-
-rules engine
-
-↓
-
-monitoring (ELK)
-
-### Frontend
-Modern web application UI
-
-- User interaction
-- Dashboards
-- Forms
-- Workflow interfaces
-
-### Backend
-- REST API
-- Authentication (RBAC)
-- Business logic
-- Workflow automation
-- Integration layer
-
-### AI Service
-- LLM-based Q&A
-- NLP processing
-- Rule-aware responses
-- Model updating & fine‑tuning
-
-### Database
-Stores:
-
-- users
-- roles
-- logs
-- workflows
-- rules
-- queries
-
-### ELK Stack
-
-Provides:
-
-- centralized logging
-- monitoring
-- analytics
-- observability
-
-### CI/CD
-
-Automated pipeline:
-build → test → dockerize → deploy
+1. Users access the system via **Nginx**.
+2. The **Frontend** serves the UI components.
+3. The **Backend** processes operational data and university management tasks.
+4. The **AI Service** handles specialized machine learning workloads independently.
 
 ---
 
-# AI Capabilities
+## 💻 Tech Stack
 
-- Natural Language Understanding
-- University rule-aware Q&A
-- Policy‑driven reasoning
-- Context extraction from documents
-- Custom dataset fine‑tuning
-- Text classification & validation
-
-The AI model interprets user queries, applies university rules, validates conditions, and generates accurate responses.
+| Category           | Technologies                                    |
+| :----------------- | :---------------------------------------------- |
+| **Frontend**       | React, React DOM, TypeScript                    |
+| **Backend**        | Django, Django REST Framework, Gunicorn, Pytest |
+| **AI Service**     | FastAPI, Uvicorn, TensorFlow, Pytest            |
+| **Infrastructure** | Docker, Docker Compose, Nginx, GitHub Actions   |
 
 ---
 
-# Access Control (RBAC)
+## 🚀 Getting Started & Setup
 
-The system enforces **Role‑Based Access Control**:
+Follow these instructions to get your local environment up and running.
 
-- **Student:** limited user operations
-- **Professor:** academic-level access
-- **Admin Staff:** workflow processing
-- **System Administrator:** full system management
+### 📋 Prerequisites
 
-Permissions are **fully configurable via the backend**.
+Ensure you have the following installed:
 
----
+- [Git](https://git-scm.com/)
+- [Docker & Docker Compose](https://www.docker.com/)
+- _(Optional for local dev)_ Node.js $\ge 20$, Python $\ge 3.11$
 
-# Technology Stack
+### 🐳 Method 1: Run with Docker Compose (Recommended)
 
-## Frontend
-- React.js (or Vue / Next.js)
-- Tailwind CSS / Material UI
+This is the fastest and most reliable way to launch the entire ecosystem.
 
-## Backend
-- Python
-- Django or FastAPI
-- REST API
-- Workflow Engine
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Ghazalees/smart-university-management-system.git
+   cd smart-university-management-system
+   ```
+2. **Build and start all services:**
+   ```bash
+   docker compose up --build
+   ```
+3. **Access the application:** Open your browser and navigate to `http://localhost`.
+4. **Stop the services:**
+   ```bash
+   docker compose down
+   ```
 
-## AI Service
-- Python
-- FastAPI
-- LLM / NLP models (GPT, Llama, fine‑tuned models)
+### 💻 Method 2: Run Services Locally (Without Docker)
 
-## Monitoring
-- Elasticsearch
-- Logstash
-- Kibana
+<details>
+<summary><strong>🖥️ Setup Frontend</strong></summary>
 
-## CI/CD
-- GitHub Actions
-- Docker
-- GitHub Container Registry (GHCR)
-- Automated deployment to server
-
----
-
-# 🚀 CI/CD Pipeline (Production Ready)
-
-Implemented using **GitHub Actions**
-
-### CI Includes
-
-- Backend linting, formatting, tests, coverage
-- Frontend linting & testing
-- AI service linting & tests
-- Dependency caching
-- Coverage artifact uploads
-
-### CD Includes
-
-- Docker image build using Buildx
-- Push images to **GitHub Container Registry**
-- Automatic deployment via **SSH to VPS**
-- Concurrency control for safe deployments
-
-Pipeline configuration file:
-.github/workflows/ci.yml
-
----
-
-# 📁 Repository Structure
-smart-university-management-system/
-
-│
-
-├── backend/
-
-├── frontend/
-
-├── ai-service/
-
-├── elk/
-
-├── docker-compose.yml
-
-├── .github/
-
-│ └── workflows/
-
-│ └── ci.yml
-
-└── README.md
-
----
-
-# 📥 Installation & Setup
-
-Clone the project:
 ```bash
-git clone <https://github.com/Ghazalees/smart-university-management-system.git>
-cd smart-university-management-system
+cd frontend
+npm install
+npm start
 ```
 
-Run all services:
+</details>
+
+<details>
+<summary><strong>⚙️ Setup Backend</strong></summary>
+
 ```bash
-docker compose up -d
+cd backend
+python -m venv venv
+source venv/bin/activate # On Windows: venv\Scripts\activate
+pip install -r requirements/development.txt
+python manage.py migrate
+python manage.py runserver
 ```
 
-This will start:
-Backend
-Frontend
-AI Service
-ELK Stack
+</details>
 
-# 👨‍💻 Contributors
-Ghazale Eslami, Masoumeh Mokhtari, Ali Rajabi, Arya Gheyratmand
+<details>
+<summary><strong>🧠 Setup AI Service</strong></summary>
 
-Supervisor: Dr. Lotfi
+```bash
+cd ai-service
+python -m venv venv
+source venv/bin/activate # On Windows: venv\Scripts\activate
+pip install -r requirements/development.txt
+uvicorn api.main:app --host 0.0.0.0 --port 9000
+```
 
-Tarbiat Modares University
+</details>
 
-# 📄 License
-This project is developed for academic and research purposes as part of the:
-Advanced Software Engineering Course — Tarbiat Modares University
+---
+
+## 🔐 Environment Variables
+
+The backend requires an environment file to run securely. Create a `.env` file in the `backend/` directory:
+
+# backend/.env
+
+DEBUG=True
+SECRET_KEY=your-super-secret-key
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+> ⚠️ **Warning:** Never use `DEBUG=True` or expose your `SECRET_KEY` in a production environment.
+
+---
+
+## ⚙️ CI/CD & Testing
+
+This repository uses **GitHub Actions** to enforce code quality and automate builds.
+
+- **Frontend CI:** Installs dependencies (`npm ci`), runs tests, and verifies the build.
+- **Backend CI:** Installs Python packages, runs Django checks, and executes `pytest-django`.
+- **AI Service CI:** Runs independent FastAPI/TensorFlow tests.
+- **Docker CI:** Verifies successful image builds for all services.
+
+### Running Tests Locally
+
+- **Frontend:** `cd frontend && npm test`
+- **Backend:** `cd backend && python manage.py test`
+- **AI Service:** `cd ai-service && python -m pytest`
+
+---
+
+## 👥 Team & Acknowledgments
+
+**Development Team:**
+
+- Gh. Eslami
+- M. Mokhtari
+- A. Rajabi
+- A. Gheyratmand
+
+**Course:** Advanced Software Engineering  
+**Professor:** Dr. Lotfi  
+**University:** Tarbiat Modares University

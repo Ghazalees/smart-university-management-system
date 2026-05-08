@@ -17,8 +17,10 @@ env/
 .env/
 *.env
 .env.local
-backend/.venv/
 ai-service/.venv/
+backend/venv/
+__pycache__/
+*.pyc
 
 # Python cache / logs
 *.log
@@ -45,7 +47,6 @@ node_modules/
 npm-debug.log
 yarn-debug.log
 yarn-error.log
-package-lock.json
 .pnp/
 .pnp.js
 
