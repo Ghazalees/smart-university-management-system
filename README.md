@@ -102,7 +102,7 @@ npm start
 cd backend
 python -m venv venv
 source venv/bin/activate # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements/development.txt
 python manage.py migrate
 python manage.py runserver
    ```
@@ -116,7 +116,7 @@ python manage.py runserver
 cd ai-service
 python -m venv venv
 source venv/bin/activate # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements/development.txt
 uvicorn api.main:app --host 0.0.0.0 --port 9000
    ```
 
