@@ -1,0 +1,8 @@
+-r base.txt
+
+pytest
+pytest-django
+flake8
+black
+coverage
+ipython

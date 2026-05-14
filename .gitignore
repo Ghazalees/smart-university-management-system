@@ -17,8 +17,10 @@ env/
 .env/
 *.env
 .env.local
-backend/.venv/
 ai-service/.venv/
+backend/venv/
+__pycache__/
+*.pyc
 
 # Python cache / logs
 *.log
