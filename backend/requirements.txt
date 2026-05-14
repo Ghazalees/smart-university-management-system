@@ -1,7 +1,15 @@
 Django>=4.2
 djangorestframework
+djangorestframework-simplejwt
 gunicorn
 pytest
 pytest-django
 flake8
 PyJWT
+python-decouple
+drf-spectacular
+Pillow
+psycopg2-binary
+black
+coverage
+ipython
