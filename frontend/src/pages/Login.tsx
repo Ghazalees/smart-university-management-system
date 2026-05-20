@@ -1,7 +1,27 @@
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useLoginMutation } from "../states/api/authApi";
 
 export default function Login() {
+  const navigate = useNavigate();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [login, { isLoading, error }] = useLoginMutation();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      await login({ email, password }).unwrap();
+      navigate("/dashboard");
+    } catch (err) {
+      console.error("Login error:", err);
+    }
+  };
+
   return (
     <section className="relative flex min-h-screen items-center justify-center bg-background px-6 text-foreground">
       {/* Background glow */}
@@ -19,48 +39,65 @@ export default function Login() {
           Welcome Back
         </h2>
 
-        {/* Email */}
-        <div className="mb-4">
-          <label className="mb-1 block text-sm text-muted-foreground">
-            Email
-          </label>
-          <input
-            type="email"
-            placeholder="example@domain.com"
-            className="w-full rounded-md border border-white/20 bg-white/10 px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
+        <form onSubmit={handleSubmit}>
+          {/* Email */}
+          <div className="mb-4">
+            <label className="mb-1 block text-sm text-muted-foreground">
+              Email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="example@domain.com"
+              required
+              className="w-full rounded-md border border-white/20 bg-white/10 px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
 
-        {/* Password */}
-        <div className="mb-4">
-          <label className="mb-1 block text-sm text-muted-foreground">
-            Password
-          </label>
-          <input
-            type="password"
-            placeholder="••••••••"
-            className="w-full rounded-md border border-white/20 bg-white/10 px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
+          {/* Password */}
+          <div className="mb-4">
+            <label className="mb-1 block text-sm text-muted-foreground">
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              className="w-full rounded-md border border-white/20 bg-white/10 px-4 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
 
-        {/* Forgot password */}
-        <div className="mb-6 text-right">
-          <Link
-            to="/forgot-password"
-            className="text-sm text-primary hover:underline"
+          {/* Forgot password */}
+          <div className="mb-6 text-right">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-primary hover:underline"
+            >
+              Forgot Password?
+            </Link>
+          </div>
+
+          {/* API error */}
+          {error && (
+            <p className="mb-4 text-sm text-red-400">
+              Login failed. Please check your email and password.
+            </p>
+          )}
+
+          {/* Login button */}
+          <motion.button
+            type="submit"
+            whileHover={{ scale: isLoading ? 1 : 1.03 }}
+            whileTap={{ scale: isLoading ? 1 : 0.96 }}
+            disabled={isLoading}
+            className="w-full rounded-md bg-primary py-3 font-medium text-white shadow-strong transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Forgot Password?
-          </Link>
-        </div>
-
-        {/* Login button */}
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.96 }}
-          className="w-full rounded-md bg-primary py-3 font-medium text-white shadow-strong transition hover:opacity-90"
-        >
-          Login
-        </motion.button>
+            {isLoading ? "Logging in..." : "Login"}
+          </motion.button>
+        </form>
 
         {/* Divider */}
         <div className="my-6 flex items-center gap-3">
