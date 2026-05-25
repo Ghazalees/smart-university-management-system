@@ -3,7 +3,8 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import Landing from "./pages/Landing/Landing";
-import { Dashboard } from "./pages/Dashboard";
+import { Dashboard } from "./pages/Dashboard/Dashboard";
+import { ProtectedRoute } from "./middleware/ProtectedRoute";
 
 export default function App() {
   return (
@@ -11,7 +12,9 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
-      <Route path="/dashboard" element={<Dashboard />} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Route>
       <Route path="/forgot-password" element={<ForgotPassword />} />
     </Routes>
   );

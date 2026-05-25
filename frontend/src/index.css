@@ -2,20 +2,40 @@
 @import "tailwindcss";
 
 @theme {
-  /* colors */
-  --color-primary: var(--color-primary);
-  --color-background: var(--color-bg);
-  --color-surface: var(--color-surface);
+  --color-primary: var(--theme-primary);
+  --color-primary-foreground: var(--theme-primary-foreground);
 
-  --color-foreground: var(--color-text);
-  --color-muted-foreground: var(--color-text-muted);
+  --color-secondary: var(--theme-secondary);
+  --color-secondary-foreground: var(--theme-secondary-foreground);
 
-  /* radius */
-  --radius-sm: var(--radius-sm);
-  --radius-md: var(--radius-md);
-  --radius-lg: var(--radius-lg);
+  --color-success: var(--theme-success);
+  --color-success-foreground: var(--theme-success-foreground);
 
-  /* shadows */
-  --shadow-soft: var(--shadow-soft);
-  --shadow-strong: var(--shadow-strong);
+  --color-warning: var(--theme-warning);
+  --color-warning-foreground: var(--theme-warning-foreground);
+
+  --color-danger: var(--theme-danger);
+  --color-danger-foreground: var(--theme-danger-foreground);
+
+  --color-background: var(--theme-background);
+  --color-surface: var(--theme-surface);
+  --color-foreground: var(--theme-foreground);
+  --color-muted-foreground: var(--theme-muted-foreground);
+
+  --radius-sm: var(--theme-radius-sm);
+  --radius-md: var(--theme-radius-md);
+  --radius-lg: var(--theme-radius-lg);
+
+  --shadow-soft: var(--theme-shadow-soft);
+  --shadow-strong: var(--theme-shadow-strong);
+}
+
+/* ... all your imports and @theme block above ... */
+
+@layer base {
+  /* Buttons */
+  button,
+  [role="button"] {
+    border-radius: var(--radius-md);
+  }
 }

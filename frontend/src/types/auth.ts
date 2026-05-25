@@ -29,3 +29,5 @@ export interface CredentialsPayload {
   accessToken: string;
   role: string;
 }
+
+export type UserRole = "admin" | "president" | "student" | "professor";

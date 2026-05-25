@@ -1,25 +1,54 @@
-/* --- Global Theme (Light) --- */
 :root {
-  --color-primary: #6366f1;
-  --color-primary-light: #818cf8;
-  --color-primary-dark: #4f46e5;
+  /* raw theme values */
+  --theme-primary: #6366f1;
+  --theme-primary-foreground: #ffffff;
 
-  --color-bg: #0f0f11;
-  --color-surface: #18181b;
-  --color-text: #e4e4e7;
-  --color-text-muted: #a1a1aa;
+  --theme-secondary: #8b5cf6;
+  --theme-secondary-foreground: #ffffff;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --theme-success: #22c55e;
+  --theme-success-foreground: #ffffff;
 
-  --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.12);
-  --shadow-strong: 0 8px 30px rgba(0, 0, 0, 0.2);
+  --theme-warning: #f59e0b;
+  --theme-warning-foreground: #111827;
+
+  --theme-danger: #ef4444;
+  --theme-danger-foreground: #ffffff;
+
+  --theme-background: #ffffff;
+  --theme-surface: #f8fafc;
+  --theme-foreground: #111827;
+  --theme-muted-foreground: #6b7280;
+
+  --theme-radius-sm: 6px;
+  --theme-radius-md: 10px;
+  --theme-radius-lg: 14px;
+
+  --theme-shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.12);
+  --theme-shadow-strong: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
 .dark {
-  --color-bg: #050505;
-  --color-surface: #111113;
-  --color-text: #f4f4f5;
-  --color-text-muted: #a1a1aa;
+  --theme-primary: #818cf8;
+  --theme-primary-foreground: #ffffff;
+
+  --theme-secondary: #a78bfa;
+  --theme-secondary-foreground: #ffffff;
+
+  --theme-success: #4ade80;
+  --theme-success-foreground: #052e16;
+
+  --theme-warning: #fbbf24;
+  --theme-warning-foreground: #111827;
+
+  --theme-danger: #f87171;
+  --theme-danger-foreground: #ffffff;
+
+  --theme-background: #050505;
+  --theme-surface: #111113;
+  --theme-foreground: #f4f4f5;
+  --theme-muted-foreground: #a1a1aa;
+
+  --theme-shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --theme-shadow-strong: 0 8px 30px rgba(0, 0, 0, 0.5);
 }
