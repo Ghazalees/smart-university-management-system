@@ -1,8 +1,7 @@
 -r base.txt
-
-pytest
-pytest-django
-flake8
-black
-coverage
-ipython
+pytest>=8.2,<9.0
+pytest-django>=4.8,<5.0
+flake8>=7.0,<8.0
+black>=24.10,<26.0
+coverage>=7.6,<8.0
+ipython>=8.26,<10.0

@@ -20,23 +20,40 @@ DOCUMENT_MANAGER_ROLES = {Role.ADMINISTRATIVE_STAFF, Role.UNIVERSITY_PRESIDENT}
 
 
 class DocumentService:
-    """Business logic for document creation, retrieval, and role-based visibility."""
+    """Business logic for document creation, retrieval, search, and visibility."""
 
     @staticmethod
-    def visible_queryset_for_user(user):
+    def visible_queryset_for_user(user, filters=None):
         """Return active documents visible to the authenticated user's role."""
         queryset = Document.objects.select_related("created_by").filter(is_active=True)
 
-        if user.has_role(DOCUMENT_MANAGER_ROLES):
-            return queryset
+        if not user.has_role(DOCUMENT_MANAGER_ROLES):
+            access_level = ROLE_ACCESS_LEVELS.get(user.primary_role())
+            if not access_level:
+                queryset = queryset.filter(access_level=Document.AccessLevel.PUBLIC)
+            else:
+                queryset = queryset.filter(
+                    Q(access_level=Document.AccessLevel.PUBLIC) | Q(access_level=access_level)
+                )
 
-        access_level = ROLE_ACCESS_LEVELS.get(user.primary_role())
-        if not access_level:
-            return queryset.filter(access_level=Document.AccessLevel.PUBLIC)
+        return DocumentService.apply_filters(queryset, filters or {})
 
-        return queryset.filter(
-            Q(access_level=Document.AccessLevel.PUBLIC) | Q(access_level=access_level)
-        )
+    @staticmethod
+    def apply_filters(queryset, filters):
+        """Apply validated document search/filter parameters."""
+        keyword = filters.get("keyword")
+        if keyword:
+            queryset = queryset.filter(Q(title__icontains=keyword) | Q(content__icontains=keyword))
+
+        document_type = filters.get("document_type")
+        if document_type:
+            queryset = queryset.filter(document_type=document_type)
+
+        access_level = filters.get("access_level")
+        if access_level:
+            queryset = queryset.filter(access_level=access_level)
+
+        return queryset
 
     @classmethod
     def create_document(cls, *, data, user):
@@ -50,7 +67,7 @@ class DocumentService:
 
     @classmethod
     def update_document(cls, *, document, data, user):
-        """Update a document and log the sensitive content-management action."""
+        """Update a document and log the content-management action."""
         for field, value in data.items():
             setattr(document, field, value)
         document.save()

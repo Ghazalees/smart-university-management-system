@@ -1,10 +1,11 @@
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 from rest_framework.views import APIView
+
 from apps.accounts.permissions import BearerTokenAuthentication
 from apps.accounts.serializers import LoginSerializer
 from apps.accounts.services import AuthFacade, RoleDashboardStrategy
+from apps.core.responses import api_error, api_success
 
 
 class LoginView(APIView):
@@ -22,8 +23,12 @@ class LoginView(APIView):
             password=serializer.validated_data["password"],
         )
         if not result["success"]:
-            return Response(result, status=status.HTTP_401_UNAUTHORIZED)
-        return Response(result, status=status.HTTP_200_OK)
+            return api_error(
+                message=result["message"],
+                errors={"detail": result["message"]},
+                status_code=status.HTTP_401_UNAUTHORIZED,
+            )
+        return api_success(message="Login successful.", data=result["data"])
 
 
 class LogoutView(APIView):
@@ -34,7 +39,8 @@ class LogoutView(APIView):
 
     def post(self, request):
         """Return a successful logout response for the current API client."""
-        return Response(AuthFacade.logout(), status=status.HTTP_200_OK)
+        result = AuthFacade.logout()
+        return api_success(message=result["message"])
 
 
 class CurrentUserView(APIView):
@@ -45,14 +51,11 @@ class CurrentUserView(APIView):
 
     def get(self, request):
         """Return the current user data and role-based dashboard selected by Strategy Pattern."""
-        return Response(
-            {
-                "success": True,
-                "data": {
-                    "user": AuthFacade.user_payload(request.user),
-                    "role": request.user.primary_role(),
-                    "dashboard": RoleDashboardStrategy.build_dashboard(request.user),
-                },
+        return api_success(
+            message="Current user retrieved successfully.",
+            data={
+                "user": AuthFacade.user_payload(request.user),
+                "role": request.user.primary_role(),
+                "dashboard": RoleDashboardStrategy.build_dashboard(request.user),
             },
-            status=status.HTTP_200_OK,
         )
