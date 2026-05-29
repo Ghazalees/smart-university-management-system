@@ -21,16 +21,19 @@ on:
 jobs:
   docker-build:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate compose file
+        run: docker compose config
+
       - name: Build frontend image
-        run: docker build -t frontend ./frontend
+        run: docker build -t smart-university-frontend ./frontend
 
       - name: Build backend image
-        run: docker build -t backend ./backend
+        run: docker build -t smart-university-backend ./backend
 
       - name: Build AI service image
-        run: docker build -t ai-service ./ai-service
+        run: docker build -t smart-university-ai-service ./ai-service

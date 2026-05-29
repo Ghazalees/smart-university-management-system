@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import authentication, exceptions
+
 from apps.accounts.services import AuthFacade
 
 
@@ -13,9 +14,11 @@ class BearerTokenAuthentication(authentication.BaseAuthentication):
         header = authentication.get_authorization_header(request).decode("utf-8")
         if not header:
             return None
+
         parts = header.split()
         if len(parts) != 2 or parts[0] != self.keyword:
             raise exceptions.AuthenticationFailed("Invalid authorization header.")
+
         payload = self._decode(parts[1])
         user = self._get_user(payload.get("sub"))
         if not user.is_active:
@@ -33,6 +36,11 @@ class BearerTokenAuthentication(authentication.BaseAuthentication):
         """Load the authenticated user from the token subject."""
         User = get_user_model()
         try:
-            return User.objects.prefetch_related("user_roles__role").get(id=int(user_id))
+            user_pk = int(user_id)
+        except (TypeError, ValueError) as exc:
+            raise exceptions.AuthenticationFailed("Invalid token subject.") from exc
+
+        try:
+            return User.objects.prefetch_related("user_roles__role").get(id=user_pk)
         except User.DoesNotExist as exc:
             raise exceptions.AuthenticationFailed("Authenticated user was not found.") from exc

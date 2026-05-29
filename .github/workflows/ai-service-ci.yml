@@ -14,11 +14,9 @@ jobs:
   ai-service-test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     defaults:
       run:
         working-directory: ai-service
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,14 +30,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
 
-      - name: Run tests if present
-        run: |
-          if [ -d tests ]; then
-            python -m pytest
-          else
-            echo "No tests directory found, skipping tests."
-          fi
-
+      - name: Run AI service tests
+        run: python -m pytest
