@@ -16,7 +16,7 @@ services:
     build: ./frontend
     container_name: su-frontend
     ports:
-      - "3000:80"
+      - "3000:3000"
     restart: always
 
   ai-service:
@@ -32,7 +32,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - backend
       - frontend
