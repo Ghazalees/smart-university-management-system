@@ -73,10 +73,10 @@ class Document(models.Model):
         db_table = "documents"
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["document_type"], name="documents_docume_bf7d98_idx"),
-            models.Index(fields=["access_level"], name="documents_access__94260f_idx"),
-            models.Index(fields=["is_active"], name="documents_is_acti_7eb1a8_idx"),
-            models.Index(fields=["title"], name="documents_title_5f04e8_idx"),
+            models.Index(fields=["document_type"], name="documents_documen_fc21d0_idx"),
+            models.Index(fields=["access_level"], name="documents_access__ab8fbf_idx"),
+            models.Index(fields=["is_active"], name="documents_is_acti_a803bb_idx"),
+            models.Index(fields=["title"], name="documents_title_3f6c9c_idx"),
             models.Index(fields=["updated_at"], name="documents_updated_5ad4a2_idx"),
             models.Index(fields=["is_knowledge_base_enabled"], name="documents_is_know_31f7bb_idx"),
         ]
