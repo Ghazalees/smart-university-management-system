@@ -2,8 +2,8 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
-from apps.core.responses import api_success
 from apps.accounts.permissions import BearerTokenAuthentication
+from apps.core.responses import api_success
 from apps.documents.permissions import CanManageDocuments
 from apps.documents.serializers import DocumentQuerySerializer, DocumentSerializer
 from apps.documents.services import DocumentService
@@ -18,6 +18,22 @@ def _ensure_document_manager(request, view, action):
         )
 
 
+def _document_collection_response(*, request, message):
+    """Validate filters and serialize visible document collections."""
+    query_serializer = DocumentQuerySerializer(data=request.query_params)
+    query_serializer.is_valid(raise_exception=True)
+    documents = DocumentService.visible_queryset_for_user(
+        request.user,
+        filters=query_serializer.validated_data,
+    )
+    serializer = DocumentSerializer(documents, many=True)
+    return api_success(
+        message=message,
+        data=serializer.data,
+        meta={"count": documents.count()},
+    )
+
+
 class DocumentListCreateView(APIView):
     """Handle GET/POST /api/v1/documents."""
 
@@ -26,17 +42,9 @@ class DocumentListCreateView(APIView):
 
     def get(self, request):
         """Return active documents visible to the authenticated user."""
-        query_serializer = DocumentQuerySerializer(data=request.query_params)
-        query_serializer.is_valid(raise_exception=True)
-        documents = DocumentService.visible_queryset_for_user(
-            request.user,
-            filters=query_serializer.validated_data,
-        )
-        serializer = DocumentSerializer(documents, many=True)
-        return api_success(
+        return _document_collection_response(
+            request=request,
             message="Documents retrieved successfully.",
-            data=serializer.data,
-            meta={"count": len(serializer.data)},
         )
 
     def post(self, request):
@@ -55,8 +63,22 @@ class DocumentListCreateView(APIView):
         )
 
 
+class DocumentSearchView(APIView):
+    """Handle GET /api/v1/documents/search for knowledge-base-ready search."""
+
+    authentication_classes = [BearerTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Search documents by title, keyword, type, access level, and KB flag."""
+        return _document_collection_response(
+            request=request,
+            message="Document search completed successfully.",
+        )
+
+
 class DocumentDetailView(APIView):
-    """Handle GET/PATCH/DELETE /api/v1/documents/<id>."""
+    """Handle GET/PATCH/DELETE /api/v1/documents/<document_id>."""
 
     authentication_classes = [BearerTokenAuthentication]
     permission_classes = [IsAuthenticated]

@@ -30,7 +30,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.core.middleware.RequestIDMiddleware",
     "apps.core.middleware.RequestLoggingMiddleware",
-    "django.middleware.security.SecurityMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -70,7 +69,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 
 REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "EXCEPTION_HANDLER": "apps.core.exceptions.custom_exception_handler",
 }
 
