@@ -12,6 +12,7 @@ This project integrates a **React** frontend, a **Django** backend, an AI servic
 ---
 
 ## 📑 Table of Contents
+
 - [Overview](#-overview)
 - [Architecture](#-architecture)
 - [Tech Stack](#-tech-stack)
@@ -37,20 +38,22 @@ This project integrates a **React** frontend, a **Django** backend, an AI servic
 ## 🏗️ Architecture
 
 **High-Level Flow:**
+
 1. Users access the system via **Nginx**.
 2. The **Frontend** serves the UI components.
 3. The **Backend** processes operational data and university management tasks.
 4. The **AI Service** handles specialized machine learning workloads independently.
+
 ---
 
 ## 💻 Tech Stack
 
-| Category | Technologies |
-| :--- | :--- |
-| **Frontend** | React, React DOM, TypeScript |
-| **Backend** | Django, Django REST Framework, Gunicorn, Pytest |
-| **AI Service** | FastAPI, Uvicorn, TensorFlow, Pytest |
-| **Infrastructure** | Docker, Docker Compose, Nginx, GitHub Actions |
+| Category           | Technologies                                    |
+| :----------------- | :---------------------------------------------- |
+| **Frontend**       | React, React DOM, TypeScript                    |
+| **Backend**        | Django, Django REST Framework, Gunicorn, Pytest |
+| **AI Service**     | FastAPI, Uvicorn, TensorFlow, Pytest            |
+| **Infrastructure** | Docker, Docker Compose, Nginx, GitHub Actions   |
 
 ---
 
@@ -59,12 +62,15 @@ This project integrates a **React** frontend, a **Django** backend, an AI servic
 Follow these instructions to get your local environment up and running.
 
 ### 📋 Prerequisites
+
 Ensure you have the following installed:
+
 - [Git](https://git-scm.com/)
 - [Docker & Docker Compose](https://www.docker.com/)
-- *(Optional for local dev)* Node.js $\ge 20$, Python $\ge 3.11$
+- _(Optional for local dev)_ Node.js $\ge 20$, Python $\ge 3.11$
 
 ### 🐳 Method 1: Run with Docker Compose (Recommended)
+
 This is the fastest and most reliable way to launch the entire ecosystem.
 
 1. **Clone the repository:**
@@ -87,38 +93,38 @@ This is the fastest and most reliable way to launch the entire ecosystem.
 <details>
 <summary><strong>🖥️ Setup Frontend</strong></summary>
 
-   ```bash
+```bash
 cd frontend
 npm install
 npm start
-   ```
+```
 
 </details>
 
 <details>
 <summary><strong>⚙️ Setup Backend</strong></summary>
 
-   ```bash
+```bash
 cd backend
 python -m venv venv
 source venv/bin/activate # On Windows: venv\Scripts\activate
 pip install -r requirements/development.txt
 python manage.py migrate
 python manage.py runserver
-   ```
+```
 
 </details>
 
 <details>
 <summary><strong>🧠 Setup AI Service</strong></summary>
 
-   ```bash
+```bash
 cd ai-service
 python -m venv venv
 source venv/bin/activate # On Windows: venv\Scripts\activate
 pip install -r requirements/development.txt
 uvicorn api.main:app --host 0.0.0.0 --port 9000
-   ```
+```
 
 </details>
 
@@ -129,6 +135,7 @@ uvicorn api.main:app --host 0.0.0.0 --port 9000
 The backend requires an environment file to run securely. Create a `.env` file in the `backend/` directory:
 
 # backend/.env
+
 DEBUG=True
 SECRET_KEY=your-super-secret-key
 ALLOWED_HOSTS=localhost,127.0.0.1
@@ -147,6 +154,7 @@ This repository uses **GitHub Actions** to enforce code quality and automate bui
 - **Docker CI:** Verifies successful image builds for all services.
 
 ### Running Tests Locally
+
 - **Frontend:** `cd frontend && npm test`
 - **Backend:** `cd backend && python manage.py test`
 - **AI Service:** `cd ai-service && python -m pytest`
@@ -156,6 +164,7 @@ This repository uses **GitHub Actions** to enforce code quality and automate bui
 ## 👥 Team & Acknowledgments
 
 **Development Team:**
+
 - Gh. Eslami
 - M. Mokhtari
 - A. Rajabi

@@ -17,6 +17,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "apps.core",
     "apps.accounts",
+    "corsheaders",
     "apps.documents",
     "apps.qa",
 ]
@@ -29,6 +30,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "apps.core.middleware.RequestIDMiddleware",
     "apps.core.middleware.RequestLoggingMiddleware",
 ]
@@ -77,6 +79,10 @@ REST_FRAMEWORK = {
 LOGIN_MAX_ATTEMPTS = int(os.getenv("LOGIN_MAX_ATTEMPTS", "3"))
 ACCOUNT_LOCK_MINUTES = int(os.getenv("ACCOUNT_LOCK_MINUTES", "10"))
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
