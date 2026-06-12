@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from apps.accounts.models import Department, Permission, Profile, Role, User, UserRole
+from apps.accounts.models import AuditLog, Department, Permission, Profile, Role, User, UserRole
 
 
 @admin.register(User)
@@ -52,3 +52,13 @@ class DepartmentAdmin(admin.ModelAdmin):
 
     list_display = ("id", "name", "code", "is_active", "created_at")
     search_fields = ("name", "code")
+
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    """Display audit events for sensitive account operations."""
+
+    list_display = ("id", "action", "actor", "target_user", "created_at")
+    list_filter = ("action",)
+    search_fields = ("action", "actor__email", "target_user__email")
+    readonly_fields = ("actor", "target_user", "action", "metadata", "created_at")

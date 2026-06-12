@@ -181,3 +181,138 @@ class RoleDashboardStrategy:
         dashboard = strategy.build(user)
         dashboard["user"] = AuthFacade.user_payload(user)
         return dashboard
+
+
+class AuditLogService:
+    """Centralize audit log creation for account and RBAC operations."""
+
+    @staticmethod
+    def log(actor, action, target_user=None, metadata=None):
+        """Create one audit event for a sensitive account operation."""
+        from apps.accounts.models import AuditLog
+
+        return AuditLog.objects.create(
+            actor=actor,
+            target_user=target_user,
+            action=action,
+            metadata=metadata or {},
+        )
+
+
+class UserManagementService:
+    """Coordinate user CRUD, profile updates, role assignment, and audit logging."""
+
+    @staticmethod
+    def base_queryset():
+        """Return the optimized user queryset used by user management APIs."""
+        User = get_user_model()
+        return User.objects.prefetch_related("user_roles__role", "user_roles__role__permissions").select_related("profile")
+
+    @classmethod
+    def list_users(cls):
+        """Return all users ordered by creation time."""
+        return cls.base_queryset().order_by("id")
+
+    @classmethod
+    def get_user(cls, user_id):
+        """Return one user by id or raise the model DoesNotExist exception."""
+        return cls.base_queryset().get(id=user_id)
+
+    @classmethod
+    def create_user(cls, data, actor):
+        """Create a user, assign a role, create a profile, and store an audit event."""
+        from apps.accounts.models import AuditLog, Profile, Role, UserRole
+
+        User = get_user_model()
+        profile_data = data.pop("profile", {})
+        role_name = data.pop("role")
+        password = data.pop("password")
+        username = data.pop("username", "") or data["email"].split("@")[0]
+        user = User(username=username, **data)
+        user.set_password(password)
+        user.save()
+
+        role = Role.objects.get(name=role_name)
+        UserRole.objects.create(user=user, role=role)
+        Profile.objects.create(
+            user=user,
+            full_name=profile_data.get("full_name") or f"{user.first_name} {user.last_name}".strip() or user.email,
+            phone=profile_data.get("phone", ""),
+            student_number=profile_data.get("student_number", ""),
+            employee_number=profile_data.get("employee_number", ""),
+            department=profile_data.get("department"),
+        )
+        AuditLogService.log(
+            actor=actor,
+            action=AuditLog.ACTION_USER_CREATED,
+            target_user=user,
+            metadata={"role": role.name, "email": user.email},
+        )
+        return user
+
+    @classmethod
+    def update_user(cls, user, data, actor):
+        """Update editable user and profile fields and store an audit event."""
+        from apps.accounts.models import AuditLog, Profile
+
+        profile_data = data.pop("profile", None)
+        changed_fields = []
+        for field in ["email", "username", "first_name", "last_name", "is_active"]:
+            if field in data:
+                setattr(user, field, data[field])
+                changed_fields.append(field)
+        if changed_fields:
+            user.save(update_fields=changed_fields + ["updated_at"])
+
+        if profile_data is not None:
+            profile, _ = Profile.objects.get_or_create(
+                user=user,
+                defaults={"full_name": user.email},
+            )
+            profile_changed_fields = []
+            for field in ["full_name", "phone", "student_number", "employee_number", "department"]:
+                if field in profile_data:
+                    setattr(profile, field, profile_data[field])
+                    profile_changed_fields.append(field)
+            if profile_changed_fields:
+                profile.save(update_fields=profile_changed_fields + ["updated_at"])
+
+        AuditLogService.log(
+            actor=actor,
+            action=AuditLog.ACTION_USER_UPDATED,
+            target_user=user,
+            metadata={"changed_fields": changed_fields, "profile_updated": profile_data is not None},
+        )
+        return cls.get_user(user.id)
+
+    @classmethod
+    def update_user_role(cls, user, role_name, actor):
+        """Replace the user's current role assignment and store an audit event."""
+        from apps.accounts.models import AuditLog, Role, UserRole
+
+        old_role = user.primary_role()
+        role = Role.objects.get(name=role_name)
+        UserRole.objects.filter(user=user).delete()
+        UserRole.objects.create(user=user, role=role)
+        AuditLogService.log(
+            actor=actor,
+            action=AuditLog.ACTION_USER_ROLE_UPDATED,
+            target_user=user,
+            metadata={"old_role": old_role, "new_role": role.name},
+        )
+        return cls.get_user(user.id)
+
+    @classmethod
+    def disable_user(cls, user, actor):
+        """Disable a user account and store an audit event."""
+        from apps.accounts.models import AuditLog
+
+        user.is_active = False
+        user.save(update_fields=["is_active", "updated_at"])
+        AuditLogService.log(
+            actor=actor,
+            action=AuditLog.ACTION_USER_DISABLED,
+            target_user=user,
+            metadata={"email": user.email},
+        )
+        return user
