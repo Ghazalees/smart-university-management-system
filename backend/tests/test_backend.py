@@ -172,3 +172,119 @@ class BackendApiTests(TestCase):
         self.assertEqual(roles_response.status_code, 200)
         self.assertEqual(permissions_response.status_code, 200)
         self.assertEqual(logs_response.status_code, 200)
+
+
+class QuestionApiTests(BackendApiTests):
+    """Verify question submission, status updates, history, and question RBAC."""
+
+    def test_student_can_submit_question(self):
+        """Verify that a student can submit a pending question."""
+        token = self._login_and_get_token("student@university.local", "Student123!")
+        self._auth(token)
+        response = self.client.post(
+            "/api/v1/questions",
+            {
+                "title": "Certificate request process",
+                "body": "How can I request a student certificate?",
+                "category": "administrative",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["data"]["status"], "Pending")
+
+    def test_my_questions_returns_only_current_user_questions(self):
+        """Verify that the my-questions endpoint returns only the current user's questions."""
+        token = self._login_and_get_token("student@university.local", "Student123!")
+        self._auth(token)
+        self.client.post(
+            "/api/v1/questions",
+            {"title": "My question", "body": "Question body", "category": "academic"},
+            format="json",
+        )
+        response = self.client.get("/api/v1/questions/my")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["meta"]["count"], 1)
+
+    def test_professor_can_answer_question(self):
+        """Verify that a professor can answer a submitted question and update status."""
+        student_token = self._login_and_get_token("student@university.local", "Student123!")
+        self._auth(student_token)
+        question_response = self.client.post(
+            "/api/v1/questions",
+            {"title": "Enrollment help", "body": "How do I enroll?", "category": "academic"},
+            format="json",
+        )
+        question_id = question_response.data["data"]["id"]
+
+        professor_token = self._login_and_get_token("professor@university.local", "Professor123!")
+        self._auth(professor_token)
+        answer_response = self.client.post(
+            f"/api/v1/questions/{question_id}/answer",
+            {
+                "body": "Please follow the enrollment guide in the student portal.",
+                "status": "Answered",
+                "confidence": "90.00",
+                "source_documents": [],
+                "note": "Answered by professor.",
+            },
+            format="json",
+        )
+        self.assertEqual(answer_response.status_code, 200)
+        self.assertEqual(answer_response.data["data"]["question"]["status"], "Answered")
+
+    def test_student_cannot_answer_question(self):
+        """Verify that a student cannot answer questions."""
+        token = self._login_and_get_token("student@university.local", "Student123!")
+        self._auth(token)
+        question_response = self.client.post(
+            "/api/v1/questions",
+            {"title": "Student question", "body": "Question body", "category": "academic"},
+            format="json",
+        )
+        question_id = question_response.data["data"]["id"]
+        answer_response = self.client.post(
+            f"/api/v1/questions/{question_id}/answer",
+            {"body": "Invalid answer", "status": "Answered"},
+            format="json",
+        )
+        self.assertEqual(answer_response.status_code, 403)
+
+    def test_question_history_is_available_to_authorized_users(self):
+        """Verify that question history is stored and returned."""
+        student_token = self._login_and_get_token("student@university.local", "Student123!")
+        self._auth(student_token)
+        question_response = self.client.post(
+            "/api/v1/questions",
+            {"title": "History question", "body": "Question body", "category": "academic"},
+            format="json",
+        )
+        question_id = question_response.data["data"]["id"]
+        history_response = self.client.get(f"/api/v1/questions/{question_id}/history")
+        self.assertEqual(history_response.status_code, 200)
+        self.assertGreaterEqual(history_response.data["meta"]["count"], 1)
+
+    def test_unauthorized_student_cannot_view_another_students_question(self):
+        """Verify that a student cannot view another student's question."""
+        User = get_user_model()
+        another_student = User.objects.create_user(
+            email="other.student@university.local",
+            username="otherstudent",
+            password="Student123!",
+        )
+        student_role = Role.objects.get(name=Role.STUDENT)
+        UserRole.objects.create(user=another_student, role=student_role)
+
+        student_token = self._login_and_get_token("student@university.local", "Student123!")
+        self._auth(student_token)
+        question_response = self.client.post(
+            "/api/v1/questions",
+            {"title": "Private question", "body": "Question body", "category": "academic"},
+            format="json",
+        )
+        question_id = question_response.data["data"]["id"]
+
+        other_token = self._login_and_get_token("other.student@university.local", "Student123!")
+        self._auth(other_token)
+        detail_response = self.client.get(f"/api/v1/questions/{question_id}")
+        self.assertEqual(detail_response.status_code, 403)
