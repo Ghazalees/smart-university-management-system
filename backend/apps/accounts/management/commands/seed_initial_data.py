@@ -4,7 +4,7 @@ from apps.accounts.models import Department, Permission, Profile, Role, User, Us
 
 
 class Command(BaseCommand):
-
+    """Seed core roles, permissions, departments, and demo users."""
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -30,6 +30,9 @@ class Command(BaseCommand):
             ("user.read", "Read user accounts"),
             ("user.manage", "Manage user accounts"),
             ("role.manage", "Manage roles and permissions"),
+            ("question.read", "Read authorized questions"),
+            ("question.answer", "Answer authorized questions"),
+            ("audit.read", "Read audit logs"),
             ("report.view", "View management reports"),
             ("system.manage", "Manage system settings"),
         ]
@@ -43,8 +46,8 @@ class Command(BaseCommand):
         """Create the four initial system roles and assign their base permissions."""
         role_permissions = {
             Role.STUDENT: ["auth.login", "dashboard.view", "profile.view", "profile.update", "question.submit", "request.submit"],
-            Role.PROFESSOR: ["auth.login", "dashboard.view", "profile.view", "profile.update", "question.submit"],
-            Role.ADMINISTRATIVE_STAFF: ["auth.login", "dashboard.view", "profile.view", "profile.update", "user.read", "user.manage"],
+            Role.PROFESSOR: ["auth.login", "dashboard.view", "profile.view", "profile.update", "question.submit", "question.read", "question.answer"],
+            Role.ADMINISTRATIVE_STAFF: ["auth.login", "dashboard.view", "profile.view", "profile.update", "user.read", "user.manage", "question.read", "question.answer", "audit.read"],
             Role.UNIVERSITY_PRESIDENT: list(permissions.keys()),
         }
         for role_name, permission_codes in role_permissions.items():
