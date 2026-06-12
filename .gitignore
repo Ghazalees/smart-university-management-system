@@ -102,3 +102,4 @@ nginx/*.log
 logs/
 temp/
 uploads/
+backend/.venv/

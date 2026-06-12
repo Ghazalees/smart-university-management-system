@@ -15,6 +15,7 @@ class Department(models.Model):
         db_table = "departments"
 
     def __str__(self):
+        """Return the department display name."""
         return self.name
 
 
@@ -29,6 +30,7 @@ class Permission(models.Model):
         db_table = "permissions"
 
     def __str__(self):
+        """Return the permission code."""
         return self.code
 
 
@@ -49,11 +51,12 @@ class Role(models.Model):
         db_table = "roles"
 
     def __str__(self):
+        """Return the role name."""
         return self.name
 
 
 class User(AbstractUser):
-    """Store an authenticated user account with basic lockout fields for later auth work."""
+    """Store an authenticated user account with lockout fields and role helpers."""
 
     email = models.EmailField(unique=True)
     failed_login_attempts = models.PositiveIntegerField(default=0)
@@ -81,6 +84,11 @@ class User(AbstractUser):
         names = role_names if isinstance(role_names, (list, tuple, set)) else [role_names]
         return self.user_roles.filter(role__name__in=names).exists()
 
+    def has_permission_code(self, permission_codes):
+        """Check whether any assigned role contains one of the requested permission codes."""
+        codes = permission_codes if isinstance(permission_codes, (list, tuple, set)) else [permission_codes]
+        return self.user_roles.filter(role__permissions__code__in=codes).exists()
+
 
 class UserRole(models.Model):
     """Connect users to roles for RBAC enforcement."""
@@ -94,6 +102,7 @@ class UserRole(models.Model):
         unique_together = ("user", "role")
 
     def __str__(self):
+        """Return a readable user-role assignment label."""
         return f"{self.user.email} -> {self.role.name}"
 
 
@@ -113,4 +122,40 @@ class Profile(models.Model):
         db_table = "profiles"
 
     def __str__(self):
+        """Return the profile display name."""
         return self.full_name
+
+
+class AuditLog(models.Model):
+    """Store compact audit events for sensitive account and RBAC operations."""
+
+    ACTION_USER_CREATED = "USER_CREATED"
+    ACTION_USER_UPDATED = "USER_UPDATED"
+    ACTION_USER_ROLE_UPDATED = "USER_ROLE_UPDATED"
+    ACTION_USER_DISABLED = "USER_DISABLED"
+
+    actor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs_created",
+    )
+    target_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs_received",
+    )
+    action = models.CharField(max_length=80)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "audit_logs"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        """Return a readable audit event label."""
+        return f"{self.action} at {self.created_at}"
