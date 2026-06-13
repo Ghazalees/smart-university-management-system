@@ -12,11 +12,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
       <Provider store={store}>
-        <NextUIProvider>
-          <NextThemesProvider attribute="class" defaultTheme="light">
-            <App />
-          </NextThemesProvider>
-        </NextUIProvider>
+        <App />
       </Provider>
     </BrowserRouter>
   </React.StrictMode>,
