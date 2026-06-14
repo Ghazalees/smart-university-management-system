@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "corsheaders",
     "apps.documents",
+    "apps.qa",
 ]
 
 MIDDLEWARE = [
