@@ -6,6 +6,7 @@ import Landing from "./pages/Landing/Landing";
 import { Dashboard } from "./pages/Dashboard/Dashboard";
 import { ProtectedRoute } from "./middleware/ProtectedRoute";
 import UserManagement from "./pages/Admin/UserManagement";
+import { DocumentDashboard } from "./pages/DocumentDashboard";
 
 // // Sprint 2 Pages (We will create these next)
 // import UserManagement from "./pages/Admin/UserManagement";
@@ -23,7 +24,7 @@ export default function App() {
       {/* Shared Authenticated Routes */}
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
-        {/* <Route path="/documents" element={<DocumentsCenter />} /> */}
+        <Route path="/documents" element={<DocumentDashboard />} />
       </Route>
 
       {/* Highly Restricted Admin Routes */}
