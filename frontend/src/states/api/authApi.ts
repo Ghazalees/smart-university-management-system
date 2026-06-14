@@ -6,7 +6,7 @@ export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     login: builder.mutation({
       query: (credentials) => ({
-        url: "api/v1/auth/login",
+        url: "auth/login",
         method: "POST",
         body: credentials,
       }),
@@ -33,7 +33,7 @@ export const authApi = baseApi.injectEndpoints({
 
     logout: builder.mutation({
       query: () => ({
-        url: "api/v1/auth/logout",
+        url: "auth/logout",
         method: "POST",
       }),
       async onQueryStarted(arg, { dispatch, queryFulfilled }) {
@@ -47,7 +47,7 @@ export const authApi = baseApi.injectEndpoints({
 
     getMe: builder.query<MeResponse, void>({
       query: () => ({
-        url: "api/v1/auth/me",
+        url: "auth/me",
         method: "GET",
       }),
       providesTags: ["User"],

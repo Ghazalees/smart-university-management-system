@@ -4,7 +4,8 @@ import type { RootState } from "../../store";
 export const baseApi = createApi({
   reducerPath: "baseApi",
   baseQuery: fetchBaseQuery({
-    baseUrl: import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/",
+    baseUrl:
+      import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/v1/",
     prepareHeaders: (headers, { getState }) => {
       const state = getState() as RootState;
       const token = state.auth.accessToken;
@@ -17,6 +18,6 @@ export const baseApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ["User"],
+  tagTypes: ["User", "Role", "Documents"],
   endpoints: () => ({}),
 });
