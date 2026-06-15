@@ -1,24 +1,12 @@
 from django.db import connection
+from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
+from .responses import success
 
-from apps.core.responses import api_success
-
-
-class HealthCheckView(APIView):
-    authentication_classes = []
-    permission_classes = []
-
+class HealthView(APIView):
+    permission_classes = [AllowAny]
     def get(self, request):
-        """Handle GET /api/v1/health."""
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
             cursor.fetchone()
-        return api_success(
-            message="Backend health check passed.",
-            data={
-                "backend": "ok",
-                "database": "ok",
-                "service": "smart-university-backend",
-            },
-            meta={"request_id": getattr(request, "request_id", None)},
-        )
+        return success({"service": "backend", "status": "ok", "database": "ok"})

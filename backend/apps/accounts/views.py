@@ -1,221 +1,108 @@
-from django.shortcuts import get_object_or_404
+from django.db import transaction
+from django.utils import timezone
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
-
-from apps.accounts.models import AuditLog, Permission, Role
-from apps.accounts.permissions import (
-    BearerTokenAuthentication,
-    HasUserManagementPermission,
-    HasUserReadPermission,
-    IsAdministrativeStaffOrPresident,
-)
-from apps.accounts.serializers import (
-    AuditLogSerializer,
-    LoginSerializer,
-    PermissionSerializer,
-    RoleSerializer,
-    UserCreateSerializer,
-    UserReadSerializer,
-    UserRoleUpdateSerializer,
+from apps.core.responses import success
+from apps.core.services import AuditEvent, AuditService
+from .commands import LoginCommand, LogoutCommand
+from .models import Permission, Role, User, UserRole
+from .permissions import HasSystemPermission
+from .serializers import (
+    CurrentUserSerializer, LoginSerializer, LogoutSerializer, PermissionSerializer,
+    RoleAssignmentSerializer, RoleSerializer, UserCreateSerializer, UserListSerializer,
     UserUpdateSerializer,
 )
-from apps.accounts.services import AuthFacade, RoleDashboardStrategy, UserManagementService
-from apps.core.responses import api_success
-
 
 class LoginView(APIView):
-    """Handle POST /api/v1/auth/login using AuthFacade."""
-
-    authentication_classes = []
-    permission_classes = []
-
+    permission_classes = [AllowAny]
     def post(self, request):
-        """Validate credentials and return a signed token when authentication succeeds."""
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        result = AuthFacade.login(
-            email=serializer.validated_data["email"],
-            password=serializer.validated_data["password"],
-        )
-        if not result["success"]:
-            from apps.core.responses import api_error
-
-            return api_error(
-                message=result["message"],
-                errors={"detail": result["message"]},
-                status_code=status.HTTP_401_UNAUTHORIZED,
-            )
-        return api_success(message="Login successful.", data=result["data"])
-
+        user, tokens = LoginCommand(**serializer.validated_data).execute()
+        return success({"tokens": tokens, "user": CurrentUserSerializer(user).data}, "Login successful")
 
 class LogoutView(APIView):
-    """Handle POST /api/v1/auth/logout for the token-based authentication flow."""
-
-    authentication_classes = []
-    permission_classes = []
-
-    def post(self, request):
-        """Return a successful logout response for the current API client."""
-        result = AuthFacade.logout()
-        return api_success(message=result["message"])
-
-
-class CurrentUserView(APIView):
-    """Handle GET /api/v1/auth/me for authenticated users."""
-
-    authentication_classes = [BearerTokenAuthentication]
     permission_classes = [IsAuthenticated]
+    def post(self, request):
+        serializer = LogoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        LogoutCommand(serializer.validated_data["refresh"]).execute()
+        return success(message="Logout successful")
 
-    def get(self, request):
-        """Return the current user data and role-based dashboard selected by Strategy Pattern."""
-        return api_success(
-            message="Current user retrieved successfully.",
-            data={
-                "user": AuthFacade.user_payload(request.user),
-                "role": request.user.primary_role(),
-                "dashboard": RoleDashboardStrategy.build_dashboard(request.user),
-            },
-        )
-
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request): return success(CurrentUserSerializer(request.user).data)
 
 class UserListCreateView(APIView):
-    """Handle collection-level user management APIs."""
-
-    authentication_classes = [BearerTokenAuthentication]
-
+    permission_classes = [HasSystemPermission]
     def get_permissions(self):
-        """Select read or management permission based on the request method."""
-        if self.request.method == "GET":
-            return [IsAuthenticated(), HasUserReadPermission()]
-        return [IsAuthenticated(), HasUserManagementPermission()]
+        self.required_permission = "users.manage" if self.request.method == "POST" else "users.view"
+        return super().get_permissions()
 
     def get(self, request):
-        """Return users visible to authorized staff or management users."""
-        users = UserManagementService.list_users()
-        serializer = UserReadSerializer(users, many=True)
-        return api_success(
-            message="Users retrieved successfully.",
-            data=serializer.data,
-            meta={"count": users.count()},
-        )
+        users = User.objects.select_related("department", "profile").prefetch_related("roles").order_by("id")
+        return success(UserListSerializer(users, many=True).data)
 
     def post(self, request):
-        """Create a new user account for an authorized account manager."""
-        serializer = UserCreateSerializer(data=request.data)
+        serializer = UserCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        user = UserManagementService.create_user(dict(serializer.validated_data), actor=request.user)
-        return api_success(
-            message="User created successfully.",
-            data=UserReadSerializer(user).data,
-            status_code=status.HTTP_201_CREATED,
-        )
-
+        user = serializer.save()
+        return success(UserListSerializer(user).data, "User created", status.HTTP_201_CREATED)
 
 class UserDetailView(APIView):
-    """Handle item-level user read, update, and disable APIs."""
-
-    authentication_classes = [BearerTokenAuthentication]
-
+    permission_classes = [HasSystemPermission]
     def get_permissions(self):
-        """Select read or management permission based on the request method."""
-        if self.request.method == "GET":
-            return [IsAuthenticated(), HasUserReadPermission()]
-        return [IsAuthenticated(), HasUserManagementPermission()]
+        self.required_permission = "users.view" if self.request.method == "GET" else "users.manage"
+        return super().get_permissions()
 
-    def get(self, request, user_id):
-        """Return details for one selected user."""
-        user = get_object_or_404(UserManagementService.base_queryset(), id=user_id)
-        return api_success(
-            message="User retrieved successfully.",
-            data=UserReadSerializer(user).data,
-        )
+    def get_object(self, pk):
+        from django.shortcuts import get_object_or_404
+        return get_object_or_404(User.objects.select_related("department", "profile").prefetch_related("roles"), pk=pk)
 
-    def patch(self, request, user_id):
-        """Partially update one selected user and profile."""
-        user = get_object_or_404(UserManagementService.base_queryset(), id=user_id)
-        serializer = UserUpdateSerializer(data=request.data, partial=True, context={"user": user})
+    def get(self, request, pk): return success(UserListSerializer(self.get_object(pk)).data)
+
+    def patch(self, request, pk):
+        user = self.get_object(pk)
+        serializer = UserUpdateSerializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        updated = UserManagementService.update_user(user, dict(serializer.validated_data), actor=request.user)
-        return api_success(
-            message="User updated successfully.",
-            data=UserReadSerializer(updated).data,
-        )
+        serializer.save()
+        AuditService.record(AuditEvent("user.updated", "User", user.pk, {"fields": list(request.data)}), actor=request.user, request=request)
+        return success(UserListSerializer(user).data, "User updated")
 
-    def delete(self, request, user_id):
-        """Disable one selected user account without deleting database history."""
-        user = get_object_or_404(UserManagementService.base_queryset(), id=user_id)
-        disabled = UserManagementService.disable_user(user, actor=request.user)
-        return api_success(
-            message="User disabled successfully.",
-            data=UserReadSerializer(disabled).data,
-        )
+    def delete(self, request, pk):
+        user = self.get_object(pk)
+        if user.pk == request.user.pk:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("You cannot deactivate your own account.")
+        user.is_active = False
+        user.deactivated_at = timezone.now()
+        user.save(update_fields=["is_active", "deactivated_at", "updated_at"])
+        AuditService.record(AuditEvent("user.deactivated", "User", user.pk), actor=request.user, request=request)
+        return success(message="User deactivated")
 
+class UserRoleView(APIView):
+    permission_classes = [HasSystemPermission]
+    required_permission = "users.assign_role"
 
-class UserRoleUpdateView(APIView):
-    """Handle role assignment updates for a selected user."""
-
-    authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [IsAuthenticated, HasUserManagementPermission]
-
-    def patch(self, request, user_id):
-        """Replace the selected user's role with the requested role."""
-        user = get_object_or_404(UserManagementService.base_queryset(), id=user_id)
-        serializer = UserRoleUpdateSerializer(data=request.data)
+    @transaction.atomic
+    def patch(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        user = get_object_or_404(User, pk=pk)
+        serializer = RoleAssignmentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        updated = UserManagementService.update_user_role(
-            user=user,
-            role_name=serializer.validated_data["role"],
-            actor=request.user,
-        )
-        return api_success(
-            message="User role updated successfully.",
-            data=UserReadSerializer(updated).data,
-        )
-
+        role_ids = [role.id for role in serializer.validated_data["role_ids"]]
+        UserRole.objects.filter(user=user).exclude(role_id__in=role_ids).delete()
+        existing = set(UserRole.objects.filter(user=user).values_list("role_id", flat=True))
+        UserRole.objects.bulk_create([UserRole(user=user, role_id=rid, assigned_by=request.user) for rid in role_ids if rid not in existing])
+        AuditService.record(AuditEvent("user.roles_updated", "User", user.pk, {"role_ids": role_ids}), actor=request.user, request=request)
+        return success(CurrentUserSerializer(user).data, "Roles updated")
 
 class RoleListView(APIView):
-    """Handle role list retrieval for authorized RBAC users."""
-
-    authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsAdministrativeStaffOrPresident]
-
-    def get(self, request):
-        """Return all roles and their assigned permission codes."""
-        roles = Role.objects.prefetch_related("permissions").order_by("id")
-        return api_success(
-            message="Roles retrieved successfully.",
-            data=RoleSerializer(roles, many=True).data,
-            meta={"count": roles.count()},
-        )
-
+    permission_classes = [IsAuthenticated]
+    def get(self, request): return success(RoleSerializer(Role.objects.prefetch_related("permissions"), many=True).data)
 
 class PermissionListView(APIView):
-    """Handle permission list retrieval for authorized RBAC users."""
-
-    authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsAdministrativeStaffOrPresident]
-
-    def get(self, request):
-        """Return all permission records used by RBAC."""
-        permissions = Permission.objects.order_by("code")
-        return api_success(
-            message="Permissions retrieved successfully.",
-            data=PermissionSerializer(permissions, many=True).data,
-            meta={"count": permissions.count()},
-        )
-
-
-class AuditLogListView(APIView):
-    """Handle audit log retrieval for authorized management users."""
-
-    authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [IsAuthenticated, IsAdministrativeStaffOrPresident]
-
-    def get(self, request):
-        """Return recent audit events for sensitive account operations."""
-        logs = AuditLog.objects.select_related("actor", "target_user").order_by("-created_at")[:100]
-        return api_success(
-            message="Audit logs retrieved successfully.",
-            data=AuditLogSerializer(logs, many=True).data,
-        )
+    permission_classes = [HasSystemPermission]
+    required_permission = "users.view"
+    def get(self, request): return success(PermissionSerializer(Permission.objects.all(), many=True).data)

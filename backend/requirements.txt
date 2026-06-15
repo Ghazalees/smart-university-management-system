@@ -1,6 +1,1 @@
-Django>=4.2
-djangorestframework
-gunicorn
-pytest
-pytest-django
-flake8
+-r requirements/base.txt

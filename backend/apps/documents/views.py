@@ -1,124 +1,49 @@
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-
-from apps.accounts.permissions import BearerTokenAuthentication
-from apps.core.responses import api_success
-from apps.documents.permissions import CanManageDocuments
-from apps.documents.serializers import DocumentQuerySerializer, DocumentSerializer
-from apps.documents.services import DocumentService
-
-
-def _ensure_document_manager(request, view, action):
-    """Enforce document manager permission with a consistent message."""
-    if not CanManageDocuments().has_permission(request, view):
-        view.permission_denied(
-            request,
-            message=f"Only administrative staff or the university president can {action} documents.",
-        )
-
-
-def _document_collection_response(*, request, message):
-    """Validate filters and serialize visible document collections."""
-    query_serializer = DocumentQuerySerializer(data=request.query_params)
-    query_serializer.is_valid(raise_exception=True)
-    documents = DocumentService.visible_queryset_for_user(
-        request.user,
-        filters=query_serializer.validated_data,
-    )
-    serializer = DocumentSerializer(documents, many=True)
-    return api_success(
-        message=message,
-        data=serializer.data,
-        meta={"count": documents.count()},
-    )
-
+from apps.core.responses import success
+from .models import Document
+from .permissions import CanManageDocuments
+from .repositories import DocumentAccessProxy, DocumentRepositoryFactory
+from .serializers import DocumentSerializer
+from .services import DocumentService
 
 class DocumentListCreateView(APIView):
-    """Handle GET/POST /api/v1/documents."""
-
-    authentication_classes = [BearerTokenAuthentication]
     permission_classes = [IsAuthenticated]
-
+    def get_permissions(self):
+        return [CanManageDocuments()] if self.request.method == "POST" else [IsAuthenticated()]
     def get(self, request):
-        """Return active documents visible to the authenticated user."""
-        return _document_collection_response(
-            request=request,
-            message="Documents retrieved successfully.",
-        )
-
+        qs = DocumentRepositoryFactory.create().search(request.user, request.query_params.get("keyword"), request.query_params.get("document_type"))
+        return success(DocumentSerializer(qs, many=True).data)
     def post(self, request):
-        """Create a new document for authorized document managers."""
-        _ensure_document_manager(request, self, "create")
         serializer = DocumentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        document = DocumentService.create_document(
-            data=serializer.validated_data,
-            user=request.user,
-        )
-        return api_success(
-            message="Document created successfully.",
-            data=DocumentSerializer(document).data,
-            status_code=status.HTTP_201_CREATED,
-        )
-
-
-class DocumentSearchView(APIView):
-    """Handle GET /api/v1/documents/search for knowledge-base-ready search."""
-
-    authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        """Search documents by title, keyword, type, access level, and KB flag."""
-        return _document_collection_response(
-            request=request,
-            message="Document search completed successfully.",
-        )
-
+        data = dict(serializer.validated_data)
+        roles = data.pop("allowed_roles", [])
+        document = DocumentService.create(actor=request.user, request=request, allowed_roles=roles, **data)
+        return success(DocumentSerializer(document).data, "Document created", status.HTTP_201_CREATED)
 
 class DocumentDetailView(APIView):
-    """Handle GET/PATCH/DELETE /api/v1/documents/<document_id>."""
-
-    authentication_classes = [BearerTokenAuthentication]
     permission_classes = [IsAuthenticated]
-
-    def get(self, request, document_id):
-        """Return one accessible document."""
-        document = DocumentService.get_visible_document_or_403(
-            document_id=document_id,
-            user=request.user,
-        )
-        return api_success(
-            message="Document retrieved successfully.",
-            data=DocumentSerializer(document).data,
-        )
-
-    def patch(self, request, document_id):
-        """Partially update a document for authorized document managers."""
-        _ensure_document_manager(request, self, "update")
-        document = DocumentService.get_visible_document_or_403(
-            document_id=document_id,
-            user=request.user,
-        )
+    def get_object(self, request, pk): return DocumentAccessProxy().get(request.user, pk)
+    def get_permissions(self):
+        return [CanManageDocuments()] if self.request.method in {"PATCH", "DELETE"} else [IsAuthenticated()]
+    def get(self, request, pk): return success(DocumentSerializer(self.get_object(request, pk)).data)
+    def patch(self, request, pk):
+        document = self.get_object(request, pk)
         serializer = DocumentSerializer(document, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        updated = DocumentService.update_document(
-            document=document,
-            data=serializer.validated_data,
-            user=request.user,
-        )
-        return api_success(
-            message="Document updated successfully.",
-            data=DocumentSerializer(updated).data,
-        )
+        data = dict(serializer.validated_data)
+        roles = data.pop("allowed_roles", None)
+        document = DocumentService.update(document, actor=request.user, request=request, allowed_roles=roles, **data)
+        return success(DocumentSerializer(document).data, "Document updated")
+    def delete(self, request, pk):
+        document = self.get_object(request, pk)
+        DocumentService.archive(document, actor=request.user, request=request)
+        return success(message="Document archived")
 
-    def delete(self, request, document_id):
-        """Archive a document for authorized document managers."""
-        _ensure_document_manager(request, self, "archive")
-        document = DocumentService.get_visible_document_or_403(
-            document_id=document_id,
-            user=request.user,
-        )
-        DocumentService.archive_document(document=document, user=request.user)
-        return api_success(message="Document archived successfully.")
+class DocumentSearchView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        qs = DocumentRepositoryFactory.create().search(request.user, request.query_params.get("keyword"), request.query_params.get("document_type"))
+        return success(DocumentSerializer(qs, many=True).data)

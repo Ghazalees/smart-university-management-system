@@ -1,103 +1,71 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
+from apps.core.responses import success
+from .adapters import AIProviderFactory
+from .analysis import KeywordRequestAnalysisStrategy
+from .models import Question
+from .permissions import CanAnswerQuestion, CanCreateQuestion
+from .serializers import AnalyzeRequestSerializer, QuestionCreateSerializer, QuestionHistorySerializer, QuestionResponseSerializer, QuestionSerializer
+from .services import QuestionService
+from .workflows import GenerateAnswerCommand
 
-from apps.accounts.permissions import BearerTokenAuthentication
-from apps.core.responses import api_success
-from apps.qa.permissions import CanAnswerQuestions, CanSubmitQuestions
-from apps.qa.serializers import (
-    QuestionAnswerSerializer,
-    QuestionCreateSerializer,
-    QuestionHistorySerializer,
-    QuestionReadSerializer,
-    QuestionResponseReadSerializer,
-)
-from apps.qa.services import QuestionAccessService, QuestionService
 
+def accessible_questions(user):
+    qs = Question.objects.select_related("user", "response").prefetch_related("response__sources", "history")
+    if user.has_system_permission("questions.view_all"):
+        return qs
+    return qs.filter(user=user)
 
 class QuestionCreateView(APIView):
-    """Handle question submission for authenticated university users."""
-
-    authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [IsAuthenticated, CanSubmitQuestions]
-
+    permission_classes = [CanCreateQuestion]
     def post(self, request):
-        """Create a pending question for the current authenticated user."""
         serializer = QuestionCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        question = QuestionService.submit_question(request.user, serializer.validated_data)
-        return api_success(
-            message="Question submitted successfully.",
-            data=QuestionReadSerializer(question).data,
-            status_code=status.HTTP_201_CREATED,
-        )
-
+        question = QuestionService.create(user=request.user, text=serializer.validated_data["text"])
+        return success(QuestionSerializer(question).data, "Question submitted", status.HTTP_201_CREATED)
 
 class MyQuestionsView(APIView):
-    """Handle retrieval of questions submitted by the current user."""
-
-    authentication_classes = [BearerTokenAuthentication]
     permission_classes = [IsAuthenticated]
-
     def get(self, request):
-        """Return only the current user's submitted questions."""
-        questions = QuestionService.list_my_questions(request.user)
-        return api_success(
-            message="My questions retrieved successfully.",
-            data=QuestionReadSerializer(questions, many=True).data,
-            meta={"count": questions.count()},
-        )
-
+        return success(QuestionSerializer(Question.objects.filter(user=request.user).select_related("response").prefetch_related("response__sources"), many=True).data)
 
 class QuestionDetailView(APIView):
-    """Handle authorized retrieval of one question and its latest answer."""
-
-    authentication_classes = [BearerTokenAuthentication]
     permission_classes = [IsAuthenticated]
-
-    def get(self, request, question_id):
-        """Return question details when the current user has access."""
-        question = QuestionAccessService.get_question_or_403(question_id, request.user)
-        return api_success(
-            message="Question retrieved successfully.",
-            data=QuestionReadSerializer(question).data,
-        )
-
+    def get(self, request, pk):
+        question = get_object_or_404(accessible_questions(request.user), pk=pk)
+        return success(QuestionSerializer(question).data)
 
 class QuestionAnswerView(APIView):
-    """Handle answer creation and status updates for selected questions."""
-
-    authentication_classes = [BearerTokenAuthentication]
-    permission_classes = [IsAuthenticated, CanAnswerQuestions]
-
-    def post(self, request, question_id):
-        """Create an answer and update the selected question status."""
-        question = QuestionAccessService.get_question_or_403(question_id, request.user)
-        serializer = QuestionAnswerSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        response = QuestionService.answer_question(question, request.user, serializer.validated_data)
-        question.refresh_from_db()
-        return api_success(
-            message="Question answer stored successfully.",
-            data={
-                "question": QuestionReadSerializer(question).data,
-                "answer": QuestionResponseReadSerializer(response).data,
-            },
-        )
-
+    permission_classes = [CanAnswerQuestion]
+    def post(self, request, pk):
+        question = get_object_or_404(accessible_questions(request.user), pk=pk)
+        response = GenerateAnswerCommand(question, request.user).execute()
+        return success({"question": QuestionSerializer(question).data, "answer": QuestionResponseSerializer(response).data}, "Answer generated")
 
 class QuestionHistoryView(APIView):
-    """Handle retrieval of the processing history for a selected question."""
-
-    authentication_classes = [BearerTokenAuthentication]
     permission_classes = [IsAuthenticated]
+    def get(self, request, pk):
+        question = get_object_or_404(accessible_questions(request.user), pk=pk)
+        return success(QuestionHistorySerializer(question.history.all(), many=True).data)
 
-    def get(self, request, question_id):
-        """Return ordered history events when the current user has access."""
-        question = QuestionAccessService.get_question_or_403(question_id, request.user)
-        history = QuestionService.question_history(question)
-        return api_success(
-            message="Question history retrieved successfully.",
-            data=QuestionHistorySerializer(history, many=True).data,
-            meta={"count": history.count()},
-        )
+class AnalyzeRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        serializer = AnalyzeRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        text = serializer.validated_data["text"]
+        try:
+            data = AIProviderFactory.create().analyze(text)
+        except Exception as exc:
+            from .exceptions import AIServiceUnavailable
+            if not isinstance(exc, AIServiceUnavailable):
+                raise
+            fallback = KeywordRequestAnalysisStrategy().analyze(text)
+            data = {
+                "category": fallback.category, "priority": fallback.priority,
+                "confidence": fallback.confidence, "suggested_workflow": fallback.suggested_workflow,
+                "source": "local-fallback",
+            }
+        return success(data)
