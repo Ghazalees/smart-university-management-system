@@ -10,68 +10,159 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('documents', '0001_initial'),
+        ("documents", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Question',
+            name="Question",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('text', models.TextField()),
-                ('status', models.CharField(choices=[('Pending', 'Pending'), ('Answered', 'Answered'), ('Escalated', 'Escalated'), ('Failed', 'Failed')], db_index=True, default='Pending', max_length=20)),
-                ('category', models.CharField(blank=True, db_index=True, max_length=80)),
-                ('priority', models.CharField(choices=[('Low', 'Low'), ('Medium', 'Medium'), ('High', 'High'), ('Urgent', 'Urgent')], db_index=True, default='Medium', max_length=20)),
-                ('analysis_confidence', models.FloatField(blank=True, null=True)),
-                ('suggested_workflow', models.CharField(blank=True, max_length=120)),
-                ('error_message', models.TextField(blank=True)),
-                ('processed_at', models.DateTimeField(blank=True, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='questions', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("text", models.TextField()),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("Pending", "Pending"),
+                            ("Answered", "Answered"),
+                            ("Escalated", "Escalated"),
+                            ("Failed", "Failed"),
+                        ],
+                        db_index=True,
+                        default="Pending",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "category",
+                    models.CharField(blank=True, db_index=True, max_length=80),
+                ),
+                (
+                    "priority",
+                    models.CharField(
+                        choices=[
+                            ("Low", "Low"),
+                            ("Medium", "Medium"),
+                            ("High", "High"),
+                            ("Urgent", "Urgent"),
+                        ],
+                        db_index=True,
+                        default="Medium",
+                        max_length=20,
+                    ),
+                ),
+                ("analysis_confidence", models.FloatField(blank=True, null=True)),
+                ("suggested_workflow", models.CharField(blank=True, max_length=120)),
+                ("error_message", models.TextField(blank=True)),
+                ("processed_at", models.DateTimeField(blank=True, null=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="questions",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created_at'],
+                "ordering": ["-created_at"],
             },
         ),
         migrations.CreateModel(
-            name='QuestionHistory',
+            name="QuestionHistory",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('event', models.CharField(db_index=True, max_length=100)),
-                ('from_status', models.CharField(blank=True, max_length=20)),
-                ('to_status', models.CharField(blank=True, max_length=20)),
-                ('metadata', models.JSONField(blank=True, default=dict)),
-                ('actor', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
-                ('question', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='history', to='qa.question')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("event", models.CharField(db_index=True, max_length=100)),
+                ("from_status", models.CharField(blank=True, max_length=20)),
+                ("to_status", models.CharField(blank=True, max_length=20)),
+                ("metadata", models.JSONField(blank=True, default=dict)),
+                (
+                    "actor",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "question",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="history",
+                        to="qa.question",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['created_at'],
+                "ordering": ["created_at"],
             },
         ),
         migrations.CreateModel(
-            name='QuestionResponse',
+            name="QuestionResponse",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('answer', models.TextField()),
-                ('confidence', models.FloatField()),
-                ('provider', models.CharField(max_length=100)),
-                ('model_name', models.CharField(blank=True, max_length=120)),
-                ('is_documented', models.BooleanField(default=True)),
-                ('question', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='response', to='qa.question')),
-                ('sources', models.ManyToManyField(blank=True, related_name='question_responses', to='documents.document')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("answer", models.TextField()),
+                ("confidence", models.FloatField()),
+                ("provider", models.CharField(max_length=100)),
+                ("model_name", models.CharField(blank=True, max_length=120)),
+                ("is_documented", models.BooleanField(default=True)),
+                (
+                    "question",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="response",
+                        to="qa.question",
+                    ),
+                ),
+                (
+                    "sources",
+                    models.ManyToManyField(
+                        blank=True,
+                        related_name="question_responses",
+                        to="documents.document",
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.AddIndex(
-            model_name='question',
-            index=models.Index(fields=['user', 'status'], name='qa_question_user_id_ff616e_idx'),
+            model_name="question",
+            index=models.Index(
+                fields=["user", "status"], name="qa_question_user_id_ff616e_idx"
+            ),
         ),
     ]

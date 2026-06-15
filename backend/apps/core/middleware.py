@@ -1,9 +1,11 @@
 import logging
 import time
 import uuid
+
 from .logging import request_id_context
 
 logger = logging.getLogger(__name__)
+
 
 class RequestIDMiddleware:
     def __init__(self, get_response):
@@ -20,6 +22,7 @@ class RequestIDMiddleware:
         finally:
             request_id_context.reset(token)
 
+
 class RequestLoggingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -28,5 +31,11 @@ class RequestLoggingMiddleware:
         started = time.perf_counter()
         response = self.get_response(request)
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
-        logger.info("%s %s status=%s duration_ms=%s", request.method, request.path, response.status_code, elapsed_ms)
+        logger.info(
+            "%s %s status=%s duration_ms=%s",
+            request.method,
+            request.path,
+            response.status_code,
+            elapsed_ms,
+        )
         return response

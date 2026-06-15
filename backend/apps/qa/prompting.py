@@ -1,5 +1,6 @@
 class PromptBuilder:
     """Builder pattern for deterministic, documented prompts."""
+
     def __init__(self):
         self._parts = []
 

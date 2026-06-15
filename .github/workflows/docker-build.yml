@@ -17,26 +17,93 @@ on:
       - 'nginx/**'
       - 'docker-compose.yml'
       - '.github/workflows/docker-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
-  docker-build:
+  changes:
+    name: Detect Changed Components
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      ai_service: ${{ steps.filter.outputs.ai_service }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare backend environment file
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+            backend:
+              - 'backend/**'
+            ai_service:
+              - 'ai-service/**'
+
+  validate-compose:
+    name: Validate Docker Compose
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare backend environment
         run: cp backend/.env.example backend/.env
 
-      - name: Validate compose file
+      - name: Validate compose configuration
         run: docker compose config
 
-      - name: Build frontend image
-        run: docker build -t smart-university-frontend ./frontend
+  backend-build:
+    name: Build Backend Image
+    runs-on: ubuntu-latest
+    needs:
+      - changes
+      - validate-compose
+    if: needs.changes.outputs.backend == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Build backend image
         run: docker build -t smart-university-backend ./backend
 
+  ai-service-build:
+    name: Build AI Service Image
+    runs-on: ubuntu-latest
+    needs:
+      - changes
+      - validate-compose
+    if: needs.changes.outputs.ai_service == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Build AI service image
         run: docker build -t smart-university-ai-service ./ai-service
+
+  frontend-build:
+    name: Build Frontend Image
+    runs-on: ubuntu-latest
+    needs:
+      - changes
+      - validate-compose
+    if: needs.changes.outputs.frontend == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build frontend image
+        run: docker build -t smart-university-frontend ./frontend

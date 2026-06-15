@@ -1,10 +1,13 @@
 from dataclasses import dataclass
 from threading import Lock
 from typing import Any
+
 from .models import AuditLog
+
 
 class ServiceRegistry:
     """Singleton registry for infrastructure services."""
+
     _instance = None
     _lock = Lock()
 
@@ -25,12 +28,14 @@ class ServiceRegistry:
     def has(self, name: str) -> bool:
         return name in self._services
 
+
 @dataclass(frozen=True)
 class AuditEvent:
     action: str
     entity_type: str = ""
     entity_id: str = ""
     metadata: dict | None = None
+
 
 class AuditService:
     @staticmethod

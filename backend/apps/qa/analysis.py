@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+
 @dataclass(frozen=True)
 class AnalysisResult:
     category: str
@@ -8,9 +9,11 @@ class AnalysisResult:
     confidence: float
     suggested_workflow: str
 
+
 class RequestAnalysisStrategy(ABC):
     @abstractmethod
     def analyze(self, text: str) -> AnalysisResult: ...
+
 
 class KeywordRequestAnalysisStrategy(RequestAnalysisStrategy):
     CATEGORY_RULES = {
@@ -25,7 +28,10 @@ class KeywordRequestAnalysisStrategy(RequestAnalysisStrategy):
 
     def analyze(self, text):
         normalized = text.lower()
-        scored = {category: sum(term in normalized for term in terms) for category, terms in self.CATEGORY_RULES.items()}
+        scored = {
+            category: sum(term in normalized for term in terms)
+            for category, terms in self.CATEGORY_RULES.items()
+        }
         category, score = max(scored.items(), key=lambda item: item[1])
         if score == 0:
             category = "general"

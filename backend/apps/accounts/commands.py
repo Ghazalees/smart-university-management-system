@@ -1,13 +1,17 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+
 from django.contrib.auth import authenticate
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+
 from .models import User
+
 
 class Command(ABC):
     @abstractmethod
     def execute(self): ...
+
 
 @dataclass
 class LoginCommand(Command):
@@ -20,7 +24,9 @@ class LoginCommand(Command):
         except User.DoesNotExist:
             candidate = None
         if candidate and candidate.is_locked():
-            raise AuthenticationFailed("Account is temporarily locked.", code="account_locked")
+            raise AuthenticationFailed(
+                "Account is temporarily locked.", code="account_locked"
+            )
         user = authenticate(username=self.username, password=self.password)
         if user is None:
             if candidate:
@@ -31,6 +37,7 @@ class LoginCommand(Command):
         user.clear_login_failures()
         refresh = RefreshToken.for_user(user)
         return user, {"access": str(refresh.access_token), "refresh": str(refresh)}
+
 
 @dataclass
 class LogoutCommand(Command):
