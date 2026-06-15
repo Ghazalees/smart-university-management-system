@@ -6,6 +6,7 @@ on:
       - main
       - develop
       - "feature/**"
+      - "integration/**"
   pull_request:
     branches:
       - main
@@ -15,23 +16,53 @@ on:
 permissions:
   contents: read
   packages: write
+  pull-requests: read
 
 concurrency:
-  group: smart-university-pipeline
+  group: smart-university-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   PYTHON_VERSION: "3.11"
-  NODE_VERSION: "18"
+  NODE_VERSION: "20"
 
-####################################################
-# BACKEND TEST / LINT
-####################################################
 jobs:
+  changes:
+    name: Detect Changed Components
+    runs-on: ubuntu-latest
+
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      ai_service: ${{ steps.filter.outputs.ai_service }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      infrastructure: ${{ steps.filter.outputs.infrastructure }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+            ai_service:
+              - 'ai-service/**'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+            infrastructure:
+              - 'docker-compose.yml'
+              - 'nginx/**'
 
   backend:
     name: Backend Tests & Lint
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
 
     defaults:
       run:
@@ -45,45 +76,90 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: backend-${{ hashFiles('backend/requirements.txt') }}
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements/*.txt
 
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
           pip install black isort flake8 pytest pytest-django coverage
 
-      - name: Check code formatting
+      - name: Check formatting
         run: |
           black --check .
           isort --check-only .
 
-      - name: Lint backend
+      - name: Run lint
         run: flake8 .
 
-      - name: Run backend tests with coverage
+      - name: Run Django checks
+        run: |
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+
+      - name: Run tests
         run: |
           coverage run -m pytest
           coverage xml
 
-      - name: Upload backend coverage
+      - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage
           path: backend/coverage.xml
 
+  ai_service:
+    name: AI Service Tests & Lint
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.ai_service == 'true'
 
-####################################################
-# FRONTEND TEST / LINT
-####################################################
+    defaults:
+      run:
+        working-directory: ai-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: ai-service/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install black isort flake8 pytest coverage
+
+      - name: Check formatting
+        run: |
+          black --check .
+          isort --check-only .
+
+      - name: Run lint
+        run: flake8 .
+
+      - name: Run tests
+        run: |
+          coverage run -m pytest
+          coverage xml
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-coverage
+          path: ai-service/coverage.xml
 
   frontend:
-    name: Frontend Tests & Lint
+    name: Frontend Tests & Build
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
 
     defaults:
       run:
@@ -103,77 +179,31 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint frontend
+      - name: Run lint
         run: npm run lint --if-present
 
-      - name: Run frontend tests
-        env:
-          CI: true
-        run: npm test -- --watchAll=false
+      - name: Run tests
+        run: npm run test --if-present
 
-
-####################################################
-# AI SERVICE TEST / LINT
-####################################################
-
-  ai_service:
-    name: AI Service Tests & Lint
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: ai-service
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ai-${{ hashFiles('ai-service/requirements.txt') }}
-
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install black isort flake8 pytest coverage
-
-      - name: Check formatting
-        run: |
-          black --check .
-          isort --check-only .
-
-      - name: Lint AI service
-        run: flake8 .
-
-      - name: Run tests with coverage
-        run: |
-          coverage run -m pytest
-          coverage xml
-
-      - name: Upload AI coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: ai-coverage
-          path: ai-service/coverage.xml
-
-
-####################################################
-# DOCKER BUILD & PUSH
-####################################################
+      - name: Build frontend
+        run: npm run build
 
   docker:
-    name: Docker Build & Publish
+    name: Build and Publish Changed Images
     runs-on: ubuntu-latest
-    needs: [backend, frontend, ai_service]
+    needs:
+      - changes
+      - backend
+      - ai_service
+      - frontend
 
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      needs.changes.result == 'success' &&
+      (needs.backend.result == 'success' || needs.backend.result == 'skipped') &&
+      (needs.ai_service.result == 'success' || needs.ai_service.result == 'skipped') &&
+      (needs.frontend.result == 'success' || needs.frontend.result == 'skipped')
 
     steps:
       - name: Checkout repository
@@ -189,8 +219,9 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build & Push Backend
-        uses: docker/build-push-action@v5
+      - name: Build and push backend
+        if: needs.changes.outputs.backend == 'true'
+        uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: true
@@ -198,17 +229,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build & Push Frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          push: true
-          tags: ghcr.io/${{ github.repository }}/frontend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build & Push AI Service
-        uses: docker/build-push-action@v5
+      - name: Build and push AI service
+        if: needs.changes.outputs.ai_service == 'true'
+        uses: docker/build-push-action@v6
         with:
           context: ./ai-service
           push: true
@@ -216,20 +239,24 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-
-####################################################
-# DEPLOY TO VPS
-####################################################
+      - name: Build and push frontend
+        if: needs.changes.outputs.frontend == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: ghcr.io/${{ github.repository }}/frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy:
     name: Production Deployment
     runs-on: ubuntu-latest
-    needs: [docker]
-
-    if: github.ref == 'refs/heads/main'
+    needs: docker
+    if: github.ref == 'refs/heads/main' && needs.docker.result == 'success'
 
     steps:
-      - name: Deploy via SSH to VPS
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}

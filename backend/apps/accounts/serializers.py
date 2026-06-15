@@ -1,193 +1,144 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
-from apps.accounts.models import AuditLog, Permission, Profile, Role
-
-
-class LoginSerializer(serializers.Serializer):
-    """Validate login input for the authentication API."""
-
-    email = serializers.EmailField()
-    password = serializers.CharField(write_only=True, trim_whitespace=False)
-
-
-class LogoutSerializer(serializers.Serializer):
-    """Represent an empty logout request body for API documentation and consistency."""
-
-    pass
-
-
-class ProfileSerializer(serializers.ModelSerializer):
-    """Serialize editable profile fields for user management APIs."""
-
-    class Meta:
-        model = Profile
-        fields = [
-            "full_name",
-            "phone",
-            "student_number",
-            "employee_number",
-            "department",
-        ]
-        extra_kwargs = {"department": {"required": False, "allow_null": True}}
+from .models import Permission, Profile, Role, User
 
 
 class RoleSerializer(serializers.ModelSerializer):
-    """Serialize role records and their permission codes."""
-
-    permissions = serializers.SerializerMethodField()
+    permissions = serializers.SlugRelatedField(
+        slug_field="code", many=True, read_only=True
+    )
 
     class Meta:
         model = Role
-        fields = ["id", "name", "description", "permissions", "created_at"]
-
-    def get_permissions(self, obj):
-        """Return assigned permission codes for the role."""
-        return list(obj.permissions.order_by("code").values_list("code", flat=True))
+        fields = ["id", "name", "description", "permissions"]
 
 
 class PermissionSerializer(serializers.ModelSerializer):
-    """Serialize permission records for RBAC management views."""
-
     class Meta:
         model = Permission
         fields = ["id", "code", "name", "description"]
 
 
-class UserReadSerializer(serializers.ModelSerializer):
-    """Serialize user accounts with profile and primary role data."""
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ["phone", "student_number", "employee_number", "bio"]
 
-    role = serializers.SerializerMethodField()
-    profile = serializers.SerializerMethodField()
+
+class CurrentUserSerializer(serializers.ModelSerializer):
+    roles = serializers.SlugRelatedField(slug_field="name", many=True, read_only=True)
+    profile = ProfileSerializer(read_only=True)
+    department = serializers.SlugRelatedField(slug_field="code", read_only=True)
+    permissions = serializers.SerializerMethodField()
 
     class Meta:
-        model = get_user_model()
+        model = User
         fields = [
             "id",
-            "email",
             "username",
+            "email",
             "first_name",
             "last_name",
-            "is_active",
-            "role",
+            "department",
+            "roles",
+            "permissions",
             "profile",
-            "created_at",
-            "updated_at",
+            "is_active",
         ]
 
-    def get_role(self, obj):
-        """Return the primary role assigned to the user."""
-        return obj.primary_role()
+    def get_permissions(self, obj):
+        if obj.is_superuser:
+            return ["*"]
+        return list(
+            Permission.objects.filter(roles__users=obj)
+            .values_list("code", flat=True)
+            .distinct()
+        )
 
-    def get_profile(self, obj):
-        """Return profile data when a profile exists for the user."""
-        if hasattr(obj, "profile"):
-            return ProfileSerializer(obj.profile).data
-        return None
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField(write_only=True, trim_whitespace=False)
 
 
-class UserCreateSerializer(serializers.Serializer):
-    """Validate account creation data for administrative user management."""
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
 
-    email = serializers.EmailField()
-    username = serializers.CharField(max_length=150, required=False, allow_blank=True)
-    password = serializers.CharField(write_only=True, min_length=8, trim_whitespace=False)
-    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
-    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
-    role = serializers.CharField(max_length=80)
+
+class UserCreateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+    role_ids = serializers.PrimaryKeyRelatedField(
+        source="roles_input",
+        queryset=Role.objects.all(),
+        many=True,
+        required=False,
+        write_only=True,
+    )
     profile = ProfileSerializer(required=False)
-
-    def validate_email(self, value):
-        """Prevent duplicate email addresses during account creation."""
-        User = get_user_model()
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("A user with this email already exists.")
-        return value
-
-    def validate_username(self, value):
-        """Prevent duplicate usernames when a username is provided."""
-        if not value:
-            return value
-        User = get_user_model()
-        if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError("A user with this username already exists.")
-        return value
-
-    def validate_role(self, value):
-        """Require the requested role to exist before creating the user."""
-        if not Role.objects.filter(name=value).exists():
-            raise serializers.ValidationError("Requested role does not exist.")
-        return value
-
-
-class UserUpdateSerializer(serializers.Serializer):
-    """Validate partial user and profile updates."""
-
-    email = serializers.EmailField(required=False)
-    username = serializers.CharField(max_length=150, required=False, allow_blank=True)
-    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
-    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
-    is_active = serializers.BooleanField(required=False)
-    profile = ProfileSerializer(required=False)
-
-    def validate_email(self, value):
-        """Prevent an email update from colliding with another user account."""
-        user = self.context.get("user")
-        User = get_user_model()
-        queryset = User.objects.filter(email=value)
-        if user is not None:
-            queryset = queryset.exclude(id=user.id)
-        if queryset.exists():
-            raise serializers.ValidationError("A user with this email already exists.")
-        return value
-
-    def validate_username(self, value):
-        """Prevent a username update from colliding with another user account."""
-        user = self.context.get("user")
-        if not value:
-            return value
-        User = get_user_model()
-        queryset = User.objects.filter(username=value)
-        if user is not None:
-            queryset = queryset.exclude(id=user.id)
-        if queryset.exists():
-            raise serializers.ValidationError("A user with this username already exists.")
-        return value
-
-
-class UserRoleUpdateSerializer(serializers.Serializer):
-    """Validate role assignment requests for a selected user."""
-
-    role = serializers.CharField(max_length=80)
-
-    def validate_role(self, value):
-        """Require the requested role to exist before assigning it to a user."""
-        if not Role.objects.filter(name=value).exists():
-            raise serializers.ValidationError("Requested role does not exist.")
-        return value
-
-
-class AuditLogSerializer(serializers.ModelSerializer):
-    """Serialize audit log events with compact actor and target identifiers."""
-
-    actor_email = serializers.SerializerMethodField()
-    target_user_email = serializers.SerializerMethodField()
 
     class Meta:
-        model = AuditLog
+        model = User
         fields = [
             "id",
-            "action",
-            "actor_email",
-            "target_user_email",
-            "metadata",
-            "created_at",
+            "username",
+            "email",
+            "password",
+            "first_name",
+            "last_name",
+            "department",
+            "role_ids",
+            "profile",
         ]
 
-    def get_actor_email(self, obj):
-        """Return the actor email when the actor still exists."""
-        return obj.actor.email if obj.actor else None
+    def validate_email(self, value):
+        return value.lower()
 
-    def get_target_user_email(self, obj):
-        """Return the target user email when the target still exists."""
-        return obj.target_user.email if obj.target_user else None
+    def create(self, validated_data):
+        from .services import UserFactory
+
+        roles = validated_data.pop("roles_input", [])
+        profile_data = validated_data.pop("profile", {})
+        return UserFactory.create(
+            actor=self.context["request"].user,
+            request=self.context["request"],
+            role_names=[role.name for role in roles],
+            profile=profile_data,
+            **validated_data,
+        )
+
+
+class UserListSerializer(CurrentUserSerializer):
+    class Meta(CurrentUserSerializer.Meta):
+        fields = CurrentUserSerializer.Meta.fields + ["date_joined", "deactivated_at"]
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    profile = ProfileSerializer(required=False)
+
+    class Meta:
+        model = User
+        fields = [
+            "email",
+            "first_name",
+            "last_name",
+            "department",
+            "is_active",
+            "profile",
+        ]
+
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop("profile", None)
+        instance = super().update(instance, validated_data)
+        if profile_data is not None:
+            profile, _ = Profile.objects.get_or_create(user=instance)
+            for key, value in profile_data.items():
+                setattr(profile, key, value)
+            profile.save()
+        return instance
+
+
+class RoleAssignmentSerializer(serializers.Serializer):
+    role_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Role.objects.all(), many=True
+    )

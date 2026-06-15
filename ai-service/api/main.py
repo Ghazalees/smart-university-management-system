@@ -1,15 +1,25 @@
 from fastapi import FastAPI
 
-app = FastAPI(title="Smart University AI Service")
+from .analysis import RequestAnalyzer
+from .providers import LLMProviderFactory
+from .schemas import AnalyzeRequest, AnalyzeResponse, AnswerRequest, AnswerResponse
+
+app = FastAPI(title="Smart University AI Service", version="1.0.0")
 
 
 @app.get("/health")
-def health_check():
-    """Return AI service health for Docker and gateway checks."""
-    return {
-        "success": True,
-        "data": {
-            "service": "ai-service",
-            "status": "ok",
-        },
-    }
+def health():
+    return {"service": "ai-service", "status": "ok"}
+
+
+@app.post("/v1/answer", response_model=AnswerResponse)
+def answer(request: AnswerRequest):
+    text, confidence, provider, model_name = LLMProviderFactory.create().answer(request)
+    return AnswerResponse(
+        answer=text, confidence=confidence, provider=provider, model_name=model_name
+    )
+
+
+@app.post("/v1/analyze", response_model=AnalyzeResponse)
+def analyze(request: AnalyzeRequest):
+    return AnalyzeResponse(**RequestAnalyzer().analyze(request.text))

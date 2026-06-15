@@ -1,24 +1,23 @@
 from django.urls import path
-from apps.accounts.views import (
-    AuditLogListView,
-    CurrentUserView,
+
+from .views import (
     LoginView,
     LogoutView,
+    MeView,
     PermissionListView,
     RoleListView,
     UserDetailView,
     UserListCreateView,
-    UserRoleUpdateView,
+    UserRoleView,
 )
 
 urlpatterns = [
-    path("auth/login", LoginView.as_view(), name="auth-login"),
-    path("auth/logout", LogoutView.as_view(), name="auth-logout"),
-    path("auth/me", CurrentUserView.as_view(), name="auth-me"),
-    path("users", UserListCreateView.as_view(), name="users-list-create"),
-    path("users/<int:user_id>", UserDetailView.as_view(), name="users-detail"),
-    path("users/<int:user_id>/role", UserRoleUpdateView.as_view(), name="users-role-update"),
-    path("roles", RoleListView.as_view(), name="roles-list"),
-    path("permissions", PermissionListView.as_view(), name="permissions-list"),
-    path("audit-logs", AuditLogListView.as_view(), name="audit-logs-list"),
+    path("auth/login", LoginView.as_view(), name="login"),
+    path("auth/logout", LogoutView.as_view(), name="logout"),
+    path("auth/me", MeView.as_view(), name="me"),
+    path("users", UserListCreateView.as_view(), name="users"),
+    path("users/<int:pk>", UserDetailView.as_view(), name="user-detail"),
+    path("users/<int:pk>/role", UserRoleView.as_view(), name="user-role"),
+    path("roles", RoleListView.as_view(), name="roles"),
+    path("permissions", PermissionListView.as_view(), name="permissions"),
 ]
