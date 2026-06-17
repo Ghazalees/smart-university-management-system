@@ -29,9 +29,18 @@ class Permission(TimeStampedModel):
 class Role(TimeStampedModel):
     STUDENT = "Student"
     PROFESSOR = "Professor"
-    ADMIN_STAFF = "AdministrativeStaff"
-    PRESIDENT = "UniversityPresident"
-    SYSTEM_ROLES = (STUDENT, PROFESSOR, ADMIN_STAFF, PRESIDENT)
+    ADMINISTRATIVE_STAFF = "AdministrativeStaff"
+    UNIVERSITY_PRESIDENT = "UniversityPresident"
+
+    ADMIN_STAFF = ADMINISTRATIVE_STAFF
+    PRESIDENT = UNIVERSITY_PRESIDENT
+
+    SYSTEM_ROLES = (
+        STUDENT,
+        PROFESSOR,
+        ADMINISTRATIVE_STAFF,
+        UNIVERSITY_PRESIDENT,
+    )
 
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
