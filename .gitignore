@@ -54,6 +54,10 @@ yarn-error.log
 frontend/build/
 frontend/.cache/
 
+# The runtime frontend image intentionally copies the committed production bundle.
+!frontend/dist/
+!frontend/dist/**
+
 ############################################################
 # EDITOR / IDE
 ############################################################
@@ -103,3 +107,11 @@ logs/
 temp/
 uploads/
 backend/.venv/
+
+############################################################
+# PLAYWRIGHT E2E OUTPUT
+############################################################
+e2e/playwright-report/
+e2e/test-results/
+e2e/blob-report/
+e2e/.cache/
