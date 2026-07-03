@@ -52,11 +52,8 @@ yarn-error.log
 
 # React build output
 frontend/build/
+frontend/dist/
 frontend/.cache/
-
-# The runtime frontend image intentionally copies the committed production bundle.
-!frontend/dist/
-!frontend/dist/**
 
 ############################################################
 # EDITOR / IDE

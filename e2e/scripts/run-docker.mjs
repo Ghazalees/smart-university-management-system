@@ -3,12 +3,10 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const e2eDirectory = fileURLToPath(new URL("..", import.meta.url));
-const frontendDirectory = fileURLToPath(new URL("../../frontend/", import.meta.url));
 const projectName = process.env.E2E_COMPOSE_PROJECT ?? "uniflow-e2e";
 const port = process.env.E2E_PORT ?? "8088";
 const baseURL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${port}`;
 const keepStack = process.env.E2E_KEEP_STACK === "1";
-const skipFrontendBuild = process.env.E2E_SKIP_FRONTEND_BUILD === "1";
 const compose = [
   "compose",
   "-p",
@@ -50,17 +48,6 @@ function run(command, args, options = {}) {
   });
 }
 
-async function buildFrontend() {
-  if (skipFrontendBuild) {
-    console.log("Skipping the frontend build because E2E_SKIP_FRONTEND_BUILD=1.");
-    return;
-  }
-
-  // The runtime image serves frontend/dist, so always build from the current source.
-  await run("npm", ["ci"], { cwd: frontendDirectory });
-  await run("npm", ["run", "build"], { cwd: frontendDirectory });
-}
-
 async function waitForHealth() {
   const deadline = Date.now() + 180_000;
   while (Date.now() < deadline) {
@@ -80,7 +67,6 @@ async function waitForHealth() {
 
 let failed = false;
 try {
-  await buildFrontend();
   await run("docker", [...compose, "down", "-v", "--remove-orphans"], { allowFailure: true });
   await run("docker", [...compose, "up", "--build", "-d"]);
   await waitForHealth();

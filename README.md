@@ -150,7 +150,9 @@ The backend is the source of truth for authorization. Hiding a control in the fr
 ├── docker-compose.prod.yml
 ├── README.md
 ├── .github/
-│   └── workflows/e2e.yml    # Playwright E2E pipeline
+│   └── workflows/
+│       ├── quality.yml       # Backend, AI, frontend, and Compose quality checks
+│       └── e2e.yml           # Playwright Docker E2E pipeline
 ├── e2e/
 │   ├── pages/               # Page objects
 │   ├── support/             # Authentication helpers and test credentials
@@ -170,13 +172,13 @@ The backend is the source of truth for authorization. Hiding a control in the fr
 │   ├── api/                  # FastAPI application and provider layer
 │   ├── tests/                # AI-service tests
 │   ├── Dockerfile
-│   └── requirements.txt
+│   ├── requirements.txt      # Runtime dependencies
+│   └── requirements-dev.txt  # Test and lint dependencies
 ├── frontend/
 │   ├── src/                  # React application source
 │   ├── public/               # Static public assets
-│   ├── dist/                 # Production bundle used by the frontend image
 │   ├── docker/nginx.conf     # Static frontend server configuration
-│   ├── Dockerfile
+│   ├── Dockerfile            # Multi-stage Node.js and Nginx image
 │   ├── package.json
 │   └── vite.config.ts
 └── nginx/
@@ -221,13 +223,13 @@ npm --version
 PowerShell:
 
 ```powershell
-cd C:\path\to\smart-university-management-system-complete
+cd C:\path\to\smart-university-management-system
 ```
 
 macOS/Linux:
 
 ```bash
-cd /path/to/smart-university-management-system-complete
+cd /path/to/smart-university-management-system
 ```
 
 ### 2. Create the environment file
@@ -576,18 +578,22 @@ Vite proxies `/api` to `http://localhost:8000` during development.
 
 ## Frontend production build
 
-The frontend Docker image serves the existing `frontend/dist` directory. After changing anything in `frontend/src`, rebuild the bundle before rebuilding the image:
+The frontend Docker image builds the React application from source using a multi-stage Node.js and Nginx Dockerfile. A committed or manually generated frontend bundle is not required. From a clean clone, Docker performs the production build automatically:
+
+```bash
+docker compose build --no-cache frontend
+docker compose up -d frontend nginx
+```
+
+To verify the production build directly during frontend development:
 
 ```bash
 cd frontend
 npm ci
 npm run build
-cd ..
-docker compose build --no-cache frontend
-docker compose up -d frontend nginx
 ```
 
-Then hard-refresh the browser:
+The generated local build output is ignored by Git. After rebuilding the container, hard-refresh the browser:
 
 - Windows/Linux: `Ctrl + F5`
 - macOS: `Cmd + Shift + R`
@@ -631,11 +637,13 @@ python -m venv .venv
 Activate the environment, then run:
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 pytest -q
+ruff format --check .
+ruff check .
 ```
 
-The AI tests cover health, internal API-key enforcement, grounded responses, confidence behavior, request limits, request analysis, and relevant-passage selection.
+The runtime container installs only `requirements.txt`; test and lint tools are isolated in `requirements-dev.txt`. The AI tests cover health, internal API-key enforcement, grounded responses, confidence behavior, request limits, request analysis, and relevant-passage selection.
 
 ### Frontend
 
@@ -714,7 +722,7 @@ The suite currently defines **20 browser checks** across desktop and mobile Chro
 
 `npm run test:docker` uses a dedicated Compose project and disposable volume. Each run:
 
-- rebuilds `frontend/dist` from the current source
+- builds the frontend image from the current source through the multi-stage Dockerfile
 - removes any previous `uniflow-e2e` containers and data
 - starts the application on `http://127.0.0.1:8088`
 - seeds deterministic system and demo records
@@ -820,16 +828,18 @@ Screenshots are captured on failure, traces are retained on the first CI retry, 
 
 ### GitHub Actions
 
-`.github/workflows/e2e.yml` runs for pull requests targeting `main` and pushes to `main` or `release/**`. The job:
+Both workflows run for pull requests targeting `main` and pushes to `main` or `release/**`.
 
-1. checks out the repository
-2. configures Node.js 22 with npm caching
-3. installs and type-checks the E2E package
-4. installs the pinned Playwright Chromium build and OS dependencies
-5. runs the Docker-isolated desktop and mobile suite
-6. uploads the HTML report, JUnit file, screenshots, traces, and videos even after a failure
+`.github/workflows/quality.yml` provides four independent jobs:
 
-A release is ready for delivery only after the existing backend, AI-service, and frontend checks, the production frontend build, and the `Playwright E2E` job all pass.
+1. `backend-quality`: Django checks, migration drift detection, Ruff formatting and linting, and Pytest coverage with a 70% minimum
+2. `ai-service-quality`: AI-service tests plus Ruff formatting and linting
+3. `frontend-quality`: TypeScript, ESLint, Vitest, and the production Vite build
+4. `docker-config`: validation of both local and production Compose configurations
+
+`.github/workflows/e2e.yml` configures Node.js 22, installs and type-checks the E2E package, installs the pinned Playwright Chromium build, runs the Docker-isolated desktop and mobile suite, and uploads failure evidence and reports.
+
+A release is ready for delivery only after all quality jobs and the `Playwright E2E` job pass.
 
 ---
 
@@ -1082,13 +1092,9 @@ docker compose up --build -d
 
 ### Frontend changes do not appear
 
-The frontend container serves `frontend/dist`. Rebuild it:
+Rebuild the multi-stage frontend image directly from source:
 
 ```bash
-cd frontend
-npm ci
-npm run build
-cd ..
 docker compose build --no-cache frontend
 docker compose up -d frontend nginx
 ```
@@ -1134,6 +1140,19 @@ docker compose logs --tail=200 backend
 docker compose logs --tail=200 ai-service
 ```
 
+### Playwright Chromium is unavailable on Windows
+
+When the Playwright-managed browser is not installed but Google Chrome is available, point the E2E suite to the system browser from the `e2e` directory:
+
+```powershell
+$env:PLAYWRIGHT_EXECUTABLE_PATH = `
+  "C:\Program Files\Google\Chrome\Application\chrome.exe"
+
+npm run test:docker
+
+Remove-Item Env:PLAYWRIGHT_EXECUTABLE_PATH
+```
+
 ### Restart Docker Desktop and WSL on Windows
 
 ```powershell
@@ -1162,4 +1181,4 @@ Then reopen Docker Desktop and retry.
 
 ## Project status
 
-The repository is self-contained for local Docker deployment and source-level development. It includes application code, runtime configuration, database migrations, production frontend assets, automated component and service tests, and a Docker-isolated Playwright release suite for authentication, authorization, modal regressions, knowledge ingestion and grounded retrieval, academic grading, reporting, and workflow state transitions. GitHub Actions executes the browser suite and preserves failure evidence. No external SaaS dependency is required when `AI_PROVIDER=local`.
+The repository is self-contained for local Docker deployment and source-level development. The frontend image builds the React application from source through a multi-stage Node.js and Nginx Dockerfile, so a clean clone does not depend on committed build artifacts. The repository includes application code, runtime configuration, database migrations, automated component and service tests, independent CI quality checks, and a Docker-isolated Playwright release suite for authentication, authorization, modal regressions, knowledge ingestion and grounded retrieval, academic grading, reporting, and workflow state transitions. GitHub Actions executes the quality and browser suites and preserves Playwright failure evidence. No external SaaS dependency is required when `AI_PROVIDER=local`.
