@@ -1,3 +1,5 @@
+"""Defines domain-specific exceptions for the grounded QA workflow."""
+
 from rest_framework.exceptions import APIException
 
 

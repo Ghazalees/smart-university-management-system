@@ -1,3 +1,5 @@
+/** Defines Tailwind content discovery and design token integration. */
+
 import type { Config } from "tailwindcss";
 import { nextui } from "@nextui-org/theme";
 

@@ -1,3 +1,6 @@
+"""Analyzes incoming questions and classifies intent for grounded response generation."""
+
+
 class RequestAnalyzer:
     RULES = {
         "registration": ("enroll", "registration", "course add", "course drop"),
@@ -19,7 +22,9 @@ class RequestAnalyzer:
         priority = (
             "Urgent"
             if any(x in normalized for x in ("urgent", "deadline today"))
-            else "High" if "deadline" in normalized else "Medium"
+            else "High"
+            if "deadline" in normalized
+            else "Medium"
         )
         workflow = {
             "registration": "registrar-review",

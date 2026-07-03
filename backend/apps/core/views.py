@@ -1,3 +1,5 @@
+"""Implements authenticated API endpoints for shared platform infrastructure and cross-cutting utilities."""
+
 from django.db import connection
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView

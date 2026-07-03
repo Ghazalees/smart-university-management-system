@@ -1,3 +1,5 @@
+"""Verifies qa behavior, authorization rules, validation, and regression scenarios."""
+
 import pytest
 from django.test import override_settings
 
@@ -121,6 +123,9 @@ def test_low_confidence_escalates(
 def test_ai_unavailable_marks_failed(
     monkeypatch, api_client, student, admin_user, question_permissions
 ):
+    Document.objects.create(
+        title="Enrollment", content="Use the portal to enroll", created_by=admin_user
+    )
     question = Question.objects.create(user=student, text="How do I enroll?")
     monkeypatch.setattr(
         "apps.qa.workflows.AIProviderFactory.create", lambda: DownProvider()
@@ -132,3 +137,68 @@ def test_ai_unavailable_marks_failed(
     assert response.status_code == 503
     question.refresh_from_db()
     assert question.status == Question.Status.FAILED
+
+
+@pytest.mark.django_db
+def test_no_relevant_source_escalates_without_calling_provider(
+    monkeypatch, api_client, student, admin_user, question_permissions
+):
+    question = Question.objects.create(
+        user=student, text="سیاست ناشناخته دانشگاه چیست؟"
+    )
+
+    def should_not_be_called():
+        raise AssertionError(
+            "The AI provider must not be called without an authorized source"
+        )
+
+    monkeypatch.setattr(
+        "apps.qa.workflows.AIProviderFactory.create", should_not_be_called
+    )
+    api_client.force_authenticate(admin_user)
+    response = api_client.post(
+        f"/api/v1/questions/{question.id}/answer", {}, format="json"
+    )
+    assert response.status_code == 200
+    question.refresh_from_db()
+    assert question.status == Question.Status.ESCALATED
+    assert question.response.confidence == 0
+    assert question.response.sources.count() == 0
+
+
+@pytest.mark.django_db
+def test_student_can_generate_answer_for_own_question(
+    monkeypatch, api_client, student, admin_user, question_permissions
+):
+    Document.objects.create(
+        title="Student leave",
+        content="Students submit leave requests through the portal.",
+        created_by=admin_user,
+    )
+    question = Question.objects.create(
+        user=student, text="How do students submit leave requests?"
+    )
+    monkeypatch.setattr(
+        "apps.qa.workflows.AIProviderFactory.create", lambda: FakeProvider(0.9)
+    )
+    api_client.force_authenticate(student)
+    response = api_client.post(
+        f"/api/v1/questions/{question.id}/answer", {}, format="json"
+    )
+    assert response.status_code == 200
+    question.refresh_from_db()
+    assert question.status == Question.Status.ANSWERED
+
+
+@pytest.mark.django_db
+def test_student_cannot_write_human_reviewed_answer(
+    api_client, student, question_permissions
+):
+    question = Question.objects.create(user=student, text="Private question")
+    api_client.force_authenticate(student)
+    response = api_client.post(
+        f"/api/v1/questions/{question.id}/human-answer",
+        {"answer": "Human answer"},
+        format="json",
+    )
+    assert response.status_code == 403

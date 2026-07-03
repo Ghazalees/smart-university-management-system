@@ -1,3 +1,5 @@
+"""Exposes the ASGI application entry point for asynchronous deployment servers."""
+
 import os
 
 from django.core.asgi import get_asgi_application

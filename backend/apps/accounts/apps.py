@@ -1,3 +1,5 @@
+"""Defines Django application metadata for user accounts, roles, permissions, and authentication."""
+
 from django.apps import AppConfig
 
 

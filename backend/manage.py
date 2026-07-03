@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+"""Provides Django command-line access for migrations, tests, seeding, and administration."""
+
 import os
 import sys
 

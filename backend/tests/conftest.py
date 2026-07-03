@@ -1,3 +1,5 @@
+"""Provides shared pytest fixtures and test configuration for backend integration tests."""
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -41,3 +43,9 @@ def admin_user(db, roles):
 def auth_client(api_client, student):
     api_client.force_authenticate(student)
     return api_client
+
+
+@pytest.fixture(autouse=True)
+def fast_password_hasher(settings):
+    """Keep the suite fast while production continues to use Django's secure hashers."""
+    settings.PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]

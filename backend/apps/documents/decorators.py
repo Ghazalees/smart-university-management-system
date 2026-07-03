@@ -1,3 +1,5 @@
+"""Provides reusable decorators for knowledge documents, versions, extraction, and governance."""
+
 from functools import wraps
 
 from apps.core.services import AuditEvent, AuditService

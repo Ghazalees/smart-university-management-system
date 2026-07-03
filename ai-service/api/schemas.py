@@ -1,16 +1,18 @@
+"""Defines validated request and response models for the AI service API."""
+
 from pydantic import BaseModel, Field
 
 
 class ContextDocument(BaseModel):
     id: int
-    title: str
-    content: str
+    title: str = Field(min_length=1, max_length=255)
+    content: str = Field(min_length=1, max_length=12000)
 
 
 class AnswerRequest(BaseModel):
     question: str = Field(min_length=3, max_length=5000)
-    prompt: str = Field(min_length=3)
-    documents: list[ContextDocument] = Field(default_factory=list)
+    prompt: str = Field(min_length=3, max_length=60000)
+    documents: list[ContextDocument] = Field(default_factory=list, max_length=10)
 
 
 class AnswerResponse(BaseModel):

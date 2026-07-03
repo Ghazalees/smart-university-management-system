@@ -1,3 +1,5 @@
+"""Defines persistent data models for user accounts, roles, permissions, and authentication."""
+
 from datetime import timedelta
 
 from django.conf import settings
@@ -83,21 +85,29 @@ class User(AbstractUser, TimeStampedModel):
     def is_locked(self):
         return bool(self.locked_until and self.locked_until > timezone.now())
 
-    def register_failed_login(self):
+    def register_failed_login(self, save=True):
         self.failed_login_attempts += 1
         if self.failed_login_attempts >= settings.LOGIN_MAX_ATTEMPTS:
             self.locked_until = timezone.now() + timedelta(
                 minutes=settings.ACCOUNT_LOCK_MINUTES
             )
-        self.save(update_fields=["failed_login_attempts", "locked_until", "updated_at"])
-
-    def clear_login_failures(self):
-        if self.failed_login_attempts or self.locked_until:
-            self.failed_login_attempts = 0
-            self.locked_until = None
+        if save:
             self.save(
                 update_fields=["failed_login_attempts", "locked_until", "updated_at"]
             )
+
+    def clear_login_failures(self, save=True):
+        if self.failed_login_attempts or self.locked_until:
+            self.failed_login_attempts = 0
+            self.locked_until = None
+            if save:
+                self.save(
+                    update_fields=[
+                        "failed_login_attempts",
+                        "locked_until",
+                        "updated_at",
+                    ]
+                )
 
 
 class UserRole(TimeStampedModel):
@@ -123,3 +133,10 @@ class Profile(TimeStampedModel):
     student_number = models.CharField(max_length=50, blank=True, db_index=True)
     employee_number = models.CharField(max_length=50, blank=True, db_index=True)
     bio = models.TextField(blank=True)
+    avatar_url = models.URLField(blank=True)
+    job_title = models.CharField(max_length=120, blank=True)
+    office_location = models.CharField(max_length=120, blank=True)
+    website = models.URLField(blank=True)
+    preferred_language = models.CharField(max_length=10, default="en")
+    timezone = models.CharField(max_length=80, default="UTC")
+    emergency_contact = models.JSONField(default=dict, blank=True)

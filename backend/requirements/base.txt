@@ -4,3 +4,4 @@ djangorestframework-simplejwt==5.5.0
 django-cors-headers==4.7.0
 httpx==0.28.1
 gunicorn==23.0.0
+pypdf==5.6.1

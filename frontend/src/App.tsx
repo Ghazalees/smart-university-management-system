@@ -1,43 +1,49 @@
-import { Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import { ForgotPassword } from "./pages/ForgotPassword";
-import Landing from "./pages/Landing/Landing";
-import { Dashboard } from "./pages/Dashboard/Dashboard";
-import { ProtectedRoute } from "./middleware/ProtectedRoute";
-import UserManagement from "./pages/Admin/UserManagement";
-import { DocumentDashboard } from "./pages/DocumentDashboard";
+/** Declares the application route tree and permission-protected workspaces. */
 
-// // Sprint 2 Pages (We will create these next)
-// import UserManagement from "./pages/Admin/UserManagement";
-// import RoleMatrix from "./pages/Admin/RoleMatrix";
-// import DocumentsCenter from "./pages/Documents/DocumentsCenter";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { AppShell } from "./components/AppShell";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { LoginPage } from "./pages/LoginPage";
+import { DashboardPage } from "./pages/DashboardPage";
+import { UsersPage } from "./pages/UsersPage";
+import { DocumentsPage } from "./pages/DocumentsPage";
+import { QuestionsPage } from "./pages/QuestionsPage";
+import { WorkflowsPage } from "./pages/WorkflowsPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
+import { ClassesPage } from "./pages/ClassesPage";
+import { ExamsPage } from "./pages/ExamsPage";
+import { GradesPage } from "./pages/GradesPage";
+import { ProfilePage } from "./pages/ProfilePage";
+import { CalendarPage } from "./pages/CalendarPage";
+import { AnalyticsPage } from "./pages/AnalyticsPage";
+import { FeedbackPage } from "./pages/FeedbackPage";
+import { DesignSystemPage } from "./pages/DesignSystemPage";
+import { ForbiddenPage, NotFoundPage } from "./pages/ErrorPages";
 
+function ShellRoute({ children }: { children: React.ReactNode }) { return <AppShell>{children}</AppShell>; }
 export default function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-
-      {/* Shared Authenticated Routes */}
-      <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/documents" element={<DocumentDashboard />} />
-      </Route>
-
-      {/* Highly Restricted Admin Routes */}
-      <Route
-        element={
-          <ProtectedRoute
-            allowedRoles={["AdministrativeStaff", "UniversityPresident"]}
-          />
-        }
-      >
-        <Route path="/admin/users" element={<UserManagement />} />
-        {/* <Route path="/admin/roles" element={<RoleMatrix />} /> */}
-      </Route>
-    </Routes>
-  );
+  return <Routes>
+    <Route path="/login" element={<LoginPage />} />
+    <Route path="/403" element={<ForbiddenPage />} />
+    <Route element={<ProtectedRoute />}>
+      <Route path="/dashboard" element={<ShellRoute><DashboardPage /></ShellRoute>} />
+      <Route path="/calendar" element={<ShellRoute><CalendarPage /></ShellRoute>} />
+      <Route path="/documents" element={<ShellRoute><DocumentsPage /></ShellRoute>} />
+      <Route path="/documents/:id" element={<ShellRoute><DocumentsPage /></ShellRoute>} />
+      <Route path="/questions" element={<ShellRoute><QuestionsPage /></ShellRoute>} />
+      <Route path="/workflows" element={<ShellRoute><WorkflowsPage /></ShellRoute>} />
+      <Route path="/workflows/:id" element={<ShellRoute><WorkflowsPage /></ShellRoute>} />
+      <Route path="/notifications" element={<ShellRoute><NotificationsPage /></ShellRoute>} />
+      <Route path="/academics/classes" element={<ShellRoute><ClassesPage /></ShellRoute>} />
+      <Route path="/academics/exams" element={<ShellRoute><ExamsPage /></ShellRoute>} />
+      <Route path="/academics/grades" element={<ShellRoute><GradesPage /></ShellRoute>} />
+      <Route path="/profile" element={<ShellRoute><ProfilePage /></ShellRoute>} />
+      <Route path="/feedback" element={<ShellRoute><FeedbackPage /></ShellRoute>} />
+      <Route path="/design-system" element={<ShellRoute><DesignSystemPage /></ShellRoute>} />
+    </Route>
+    <Route element={<ProtectedRoute permission="users.view" />}><Route path="/admin/users" element={<ShellRoute><UsersPage /></ShellRoute>} /></Route>
+    <Route element={<ProtectedRoute permission="reports.view_all" />}><Route path="/analytics" element={<ShellRoute><AnalyticsPage /></ShellRoute>} /></Route>
+    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+    <Route path="*" element={<NotFoundPage />} />
+  </Routes>;
 }

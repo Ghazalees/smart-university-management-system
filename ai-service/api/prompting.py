@@ -1,3 +1,6 @@
+"""Builds safe, source-grounded prompts for the configured AI provider."""
+
+
 class ResponseBuilder:
     """Builder pattern for readable source-grounded responses."""
 

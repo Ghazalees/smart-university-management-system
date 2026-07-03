@@ -1,3 +1,5 @@
+/** Configures TypeScript and React linting rules for maintainable frontend code. */
+
 import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'

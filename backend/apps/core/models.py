@@ -1,3 +1,5 @@
+"""Defines persistent data models for shared platform infrastructure and cross-cutting utilities."""
+
 from django.conf import settings
 from django.db import models
 

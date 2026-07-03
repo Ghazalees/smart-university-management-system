@@ -1,3 +1,5 @@
+"""Contains reusable business logic for user accounts, roles, permissions, and authentication."""
+
 from django.db import transaction
 
 from apps.core.services import AuditEvent, AuditService
