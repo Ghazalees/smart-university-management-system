@@ -1,3 +1,5 @@
+"""Builds consistent API success and error response envelopes."""
+
 from rest_framework.response import Response
 
 

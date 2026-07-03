@@ -1,3 +1,5 @@
+"""Configures structured audit and application logging helpers."""
+
 import contextvars
 import logging
 

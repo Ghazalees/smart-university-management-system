@@ -1,3 +1,5 @@
+"""Defines Django application metadata for shared platform infrastructure and cross-cutting utilities."""
+
 from django.apps import AppConfig
 
 

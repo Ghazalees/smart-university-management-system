@@ -1,3 +1,5 @@
+"""Analyzes questions and response quality for the grounded QA workflow."""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 

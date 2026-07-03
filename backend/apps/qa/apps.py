@@ -1,3 +1,5 @@
+"""Defines Django application metadata for grounded question answering, retrieval, and AI orchestration."""
+
 from django.apps import AppConfig
 
 

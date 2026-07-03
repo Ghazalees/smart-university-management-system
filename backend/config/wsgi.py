@@ -1,3 +1,5 @@
+"""Exposes the WSGI application entry point for synchronous deployment servers."""
+
 import os
 
 from django.core.wsgi import get_wsgi_application

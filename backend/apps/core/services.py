@@ -1,4 +1,7 @@
+"""Contains reusable business logic for shared platform infrastructure and cross-cutting utilities."""
+
 from dataclasses import dataclass
+from ipaddress import ip_address
 from threading import Lock
 from typing import Any
 
@@ -6,7 +9,7 @@ from .models import AuditLog
 
 
 class ServiceRegistry:
-    """Singleton registry for infrastructure services."""
+    """Thread-safe Singleton registry for infrastructure services."""
 
     _instance = None
     _lock = Lock()
@@ -28,6 +31,9 @@ class ServiceRegistry:
     def has(self, name: str) -> bool:
         return name in self._services
 
+    def clear(self) -> None:
+        self._services.clear()
+
 
 @dataclass(frozen=True)
 class AuditEvent:
@@ -37,15 +43,24 @@ class AuditEvent:
     metadata: dict | None = None
 
 
+def _request_ip(request):
+    if not request:
+        return None
+    candidate = request.META.get("REMOTE_ADDR")
+    try:
+        return str(ip_address(candidate)) if candidate else None
+    except ValueError:
+        return None
+
+
 class AuditService:
     @staticmethod
     def record(event: AuditEvent, actor=None, request=None):
-        ip = request.META.get("REMOTE_ADDR") if request else None
         return AuditLog.objects.create(
             actor=actor if getattr(actor, "is_authenticated", False) else None,
-            action=event.action,
-            entity_type=event.entity_type,
-            entity_id=str(event.entity_id),
+            action=event.action[:100],
+            entity_type=event.entity_type[:100],
+            entity_id=str(event.entity_id)[:64],
             metadata=event.metadata or {},
-            ip_address=ip,
+            ip_address=_request_ip(request),
         )

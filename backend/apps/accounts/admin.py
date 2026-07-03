@@ -1,3 +1,5 @@
+"""Registers user accounts, roles, permissions, and authentication models and controls for Django administration."""
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 

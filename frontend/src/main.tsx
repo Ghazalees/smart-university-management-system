@@ -1,21 +1,25 @@
+/** Bootstraps React, Redux, theming, routing, error handling, and toast providers. */
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import App from "./App";
-import "./index.css";
 import { Provider } from "react-redux";
-import { store } from "./store";
-import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { ThemeProvider } from "next-themes";
+import { store } from "./app/store";
+import App from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ToastProvider } from "./components/Toast";
+import "@fontsource-variable/geist";
+import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <Provider store={store}>
-        {/* Only next-themes is required here to manage your global .dark class */}
-        <NextThemesProvider attribute="class" defaultTheme="dark">
-          <App />
-        </NextThemesProvider>
-      </Provider>
-    </BrowserRouter>
+    <Provider store={store}>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <BrowserRouter>
+          <ErrorBoundary><ToastProvider><App /></ToastProvider></ErrorBoundary>
+        </BrowserRouter>
+      </ThemeProvider>
+    </Provider>
   </React.StrictMode>,
 );

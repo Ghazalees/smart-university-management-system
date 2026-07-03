@@ -1,3 +1,5 @@
+"""Verifies auth behavior, authorization rules, validation, and regression scenarios."""
+
 import pytest
 from rest_framework_simplejwt.tokens import RefreshToken
 

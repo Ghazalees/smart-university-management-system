@@ -1,3 +1,5 @@
+"""Defines persistent data models for grounded question answering, retrieval, and AI orchestration."""
+
 from django.conf import settings
 from django.db import models
 
@@ -51,6 +53,12 @@ class QuestionResponse(TimeStampedModel):
     sources = models.ManyToManyField(
         Document, blank=True, related_name="question_responses"
     )
+    citations = models.JSONField(default=list, blank=True)
+    retrieval_metadata = models.JSONField(default=dict, blank=True)
+    safety_status = models.CharField(max_length=40, default="grounded")
+    latency_ms = models.PositiveIntegerField(null=True, blank=True)
+    user_rating = models.SmallIntegerField(null=True, blank=True)
+    user_feedback = models.TextField(blank=True)
 
 
 class QuestionHistory(TimeStampedModel):

@@ -1,3 +1,5 @@
+"""Coordinates side effects emitted by qa domain changes."""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 

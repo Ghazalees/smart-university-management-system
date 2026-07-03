@@ -1,3 +1,5 @@
+"""Enforces role- and object-level authorization for knowledge documents, versions, extraction, and governance."""
+
 from rest_framework.permissions import BasePermission
 
 

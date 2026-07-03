@@ -1,3 +1,5 @@
+"""Enforces role- and object-level authorization for user accounts, roles, permissions, and authentication."""
+
 from rest_framework.permissions import BasePermission
 
 from .models import Role
