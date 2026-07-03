@@ -54,8 +54,8 @@ export function LoginPage() {
       <section className="login-panel">
         <form className="login-form" onSubmit={submit}>
           <div><p className="eyebrow">Welcome back</p><h2>Sign in to your campus</h2><p>Use your university username or email address.</p></div>
-          {auth.sessionExpired ? <div className="inline-alert">Your session expired. Sign in again to continue securely.</div> : null}
-          {error ? <div className="inline-alert">{error}</div> : null}
+          {auth.sessionExpired ? <div className="inline-alert" role="alert">Your session expired. Sign in again to continue securely.</div> : null}
+          {error ? <div className="inline-alert" role="alert">{error}</div> : null}
           <Input label="Username or email" value={identifier} onChange={(event) => setIdentifier(event.target.value)} autoComplete="username" required />
           <Input label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required />
           <Button type="submit" disabled={isLoading || !identifier || !password}>{isLoading ? "Signing in…" : "Sign in"}<ArrowRight /></Button>

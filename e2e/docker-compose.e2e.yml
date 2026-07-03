@@ -1,0 +1,10 @@
+services:
+  backend:
+    environment:
+      LOGIN_THROTTLE_RATE: 500/min
+      TOKEN_THROTTLE_RATE: 500/min
+      AI_THROTTLE_RATE: 500/min
+
+  nginx:
+    volumes:
+      - ./e2e/nginx.e2e.conf:/etc/nginx/nginx.conf:ro

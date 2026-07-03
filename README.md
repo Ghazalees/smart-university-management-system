@@ -123,7 +123,7 @@ Only the gateway is published to the host in the default Docker setup. The backe
 | AI service | FastAPI, Pydantic, HTTPX, local or remote provider abstraction |
 | Storage | SQLite in a persistent Docker volume |
 | Gateway | Nginx 1.27 Alpine |
-| Testing | Pytest, pytest-django, Vitest, React Testing Library |
+| Testing | Pytest, pytest-django, Vitest, React Testing Library, Playwright |
 | Deployment | Docker and Docker Compose v2 |
 
 ---
@@ -149,6 +149,15 @@ The backend is the source of truth for authorization. Hiding a control in the fr
 ├── docker-compose.yml
 ├── docker-compose.prod.yml
 ├── README.md
+├── .github/
+│   └── workflows/e2e.yml    # Playwright E2E pipeline
+├── e2e/
+│   ├── pages/               # Page objects
+│   ├── support/             # Authentication helpers and test credentials
+│   ├── tests/               # Browser-level acceptance tests
+│   ├── docker-compose.e2e.yml
+│   ├── playwright.config.ts
+│   └── package.json
 ├── backend/
 │   ├── apps/                 # Django domain applications
 │   ├── config/               # Django settings and URL configuration
@@ -186,11 +195,12 @@ The backend is the source of truth for authorization. Hiding a control in the fr
 - At least 4 GB of available memory
 - Port 80 available, or another port configured through `HTTP_PORT`
 
-### Local development workflow
+### Local development and E2E workflow
 
 - Python 3.12
 - Node.js 22 LTS or newer
 - npm 10 or newer
+- Chromium installed through Playwright for browser tests
 
 Verify the tools:
 
@@ -588,7 +598,7 @@ The login page uses its original responsive, scrollable behavior so content rema
 
 ## Testing and quality checks
 
-The repository includes automated backend, AI-service, and frontend tests.
+The repository includes automated backend, AI-service, frontend component, and browser-level end-to-end tests.
 
 ### Backend
 
@@ -651,59 +661,175 @@ npm run test:watch
 
 ## End-to-end verification
 
-Use this checklist after a fresh Docker startup.
+The `e2e/` package is a focused Playwright release suite for the highest-risk UniFlow journeys. It exercises the real React application through the browser and crosses the Nginx gateway, Django REST API, SQLite test database, FastAPI AI service, and seeded role model. Backend behavior is not mocked.
 
-### Authentication and roles
+The suite is intentionally selective rather than exhaustive. Unit, component, and API tests remain responsible for detailed code-path coverage; the browser suite verifies that critical components work together from a user's point of view.
 
-1. Sign in with each development role.
-2. Confirm each role sees only its authorized navigation and actions.
-3. Sign out and verify protected pages redirect to `/login`.
+### Test strategy
 
-### Modal behavior
+| Testing concept | How UniFlow applies it |
+|---|---|
+| Verification | TypeScript compilation, existing unit/component/API suites, route and permission assertions, and exact contract checks verify the implementation against its technical design. |
+| Validation | Browser journeys validate that students, professors, and staff can complete the real tasks the platform is intended to support. |
+| Black-box testing | Playwright drives visible controls and compares observable outcomes without calling internal implementation functions. |
+| System and release testing | Tests run against the assembled multi-service application in an isolated Docker environment. |
+| Positive testing | Valid login, student registration, enrollment, grading, DOCX ingestion, revision creation, question answering, and workflow approval are covered. |
+| Negative testing | Invalid credentials, unauthorized routes, duplicate student numbers, unsupported uploads, and scores above the accepted range are rejected safely. |
+| Equivalence partitioning | Representative valid and invalid input classes are used for credentials, student identity, file type, role access, and grade values. |
+| Boundary-value analysis | The grading flow explicitly checks the upper boundary by rejecting `100.01` before accepting a valid score. |
+| Decision-table testing | A role matrix verifies navigation and capabilities for Student, Professor, Administrative Staff, and President. |
+| State-transition testing | A leave request is verified through `pending → under review → approved`. Document revision history is also checked from version 1 to version 2. |
+| Regression testing | Previously reported modal focus, Escape, close-button, backdrop, and body-scroll defects have dedicated repeatable browser tests. |
+| Risk-based testing | Authentication, authorization, stored academic results, document ingestion, grounded answers, and workflow state changes receive priority. |
+| Non-functional testing | Critical WCAG accessibility violations and mobile horizontal overflow are checked on representative pages. |
 
-1. Open forms in Requests, Knowledge, Classes, Grades, and Feedback.
-2. Confirm text fields retain focus while typing.
-3. Confirm each modal closes using:
-   - the close button
-   - `Escape`
-   - `Cancel`
-   - the backdrop, where enabled
-4. Confirm the page is not left with a blocking overlay or locked scroll.
+Passing tests demonstrate the expected behavior for the tested scenarios; they do not prove that the software is free of every possible defect.
 
-### Knowledge and AI
+### Covered scenarios
 
-1. Sign in as Administrative Staff.
-2. Upload a text-based `.docx` file in Knowledge.
-3. Set it to Published and enable grounded AI usage.
-4. Select an access level that includes the user who will ask the question.
-5. Ask a question whose answer appears near the end of the document.
-6. Confirm the answer includes relevant content and a citation to the uploaded document.
-7. Edit the document using Create Revision.
-8. Confirm a new version appears and the revision summary is retained.
+The suite currently defines **20 browser checks** across desktop and mobile Chromium:
 
-### Student registration and enrollment
+1. gateway and backend health
+2. UniFlow browser title and secure login presentation
+3. absence of demo credentials on the login page
+4. rejection of invalid credentials
+5. guest redirection from protected routes
+6. valid professor login and logout
+7. critical accessibility checks for login and dashboard
+8. mobile login and navigation without horizontal overflow
+9. role-based navigation for all four seeded roles
+10. direct-route denial for an unauthorized student
+11. professor-only class and grading actions
+12. modal focus preservation during controlled rerenders
+13. modal closing with Escape and the explicit close control
+14. safe backdrop closing and restoration of document scrolling
+15. rejection of unsupported knowledge-file types
+16. DOCX upload, extraction, indexing, and visible governed content
+17. document revision creation and version-history verification
+18. grounded student Q&A with the uploaded document as a visible source
+19. student registration, duplicate-number rejection, enrollment, class editing, grade-boundary validation, enrollment-based student lookup, grading, report statistics, feedback, and student privacy
+20. leave-request state transitions from submission through administrative approval
 
-1. Create a new user with the Student role and a unique student number.
-2. Confirm duplicate student numbers are rejected.
-3. Enroll the student in a class.
-4. Confirm duplicate enrollment and full-capacity enrollment are rejected.
+### Test isolation
 
-### Professor grading and class report
+`npm run test:docker` uses a dedicated Compose project and disposable volume. Each run:
 
-1. Sign in as the professor who owns the class.
-2. Edit the class and save the change.
-3. Open Record Grade and confirm students are loaded from class enrollments.
-4. Record a grade and feedback.
-5. Open the class report and verify the student list, grades, ungraded count, average, minimum, maximum, and feedback.
-6. Sign in as a student and confirm other students' results are not visible.
+- rebuilds `frontend/dist` from the current source
+- removes any previous `uniflow-e2e` containers and data
+- starts the application on `http://127.0.0.1:8088`
+- seeds deterministic system and demo records
+- increases only the isolated test stack's throttling limits
+- waits for the gateway health endpoint
+- runs Playwright with one worker to keep stateful journeys deterministic
+- captures diagnostics on failure
+- removes the containers and volume after completion
 
-### API health smoke test
+Production throttling and runtime configuration are not changed.
+
+### Install E2E dependencies
+
+From the repository root:
 
 ```bash
-curl http://localhost/gateway-health
-curl http://localhost/healthz
-curl http://localhost/api/v1/health
+cd e2e
+npm ci
+npx playwright install --with-deps chromium
+npm run typecheck
 ```
+
+Docker Desktop must be running before the isolated suite starts.
+
+### Recommended release command
+
+```bash
+cd e2e
+npm run test:docker
+```
+
+Use another port when `8088` is occupied:
+
+macOS/Linux:
+
+```bash
+E2E_PORT=8090 npm run test:docker
+```
+
+PowerShell:
+
+```powershell
+$env:E2E_PORT = "8090"
+npm run test:docker
+Remove-Item Env:E2E_PORT
+```
+
+Keep the isolated stack running for investigation:
+
+macOS/Linux:
+
+```bash
+E2E_KEEP_STACK=1 npm run test:docker
+```
+
+PowerShell:
+
+```powershell
+$env:E2E_KEEP_STACK = "1"
+npm run test:docker
+Remove-Item Env:E2E_KEEP_STACK
+```
+
+### Run against an existing disposable environment
+
+```bash
+cd e2e
+E2E_BASE_URL=http://localhost npm test
+```
+
+PowerShell:
+
+```powershell
+cd e2e
+$env:E2E_BASE_URL = "http://localhost"
+npm test
+Remove-Item Env:E2E_BASE_URL
+```
+
+Useful focused commands:
+
+```bash
+npm run test:smoke      # health, authentication, accessibility, and role smoke checks
+npm run test:chromium   # desktop Chromium project only
+npm run test:headed     # visible desktop browser
+npm run test:ui         # Playwright interactive mode
+npm run report          # open the latest HTML report
+```
+
+Running the complete suite against a persistent development database is discouraged because the lifecycle tests intentionally create records and update academic or workflow state.
+
+### Evidence and diagnostics
+
+Generated evidence is excluded from Git:
+
+```text
+e2e/playwright-report/        HTML report
+e2e/test-results/junit.xml   JUnit results
+e2e/test-results/artifacts/  failure screenshots, traces, and retained videos
+```
+
+Screenshots are captured on failure, traces are retained on the first CI retry, and videos are retained only for failed CI tests.
+
+### GitHub Actions
+
+`.github/workflows/e2e.yml` runs for pull requests targeting `main` and pushes to `main` or `release/**`. The job:
+
+1. checks out the repository
+2. configures Node.js 22 with npm caching
+3. installs and type-checks the E2E package
+4. installs the pinned Playwright Chromium build and OS dependencies
+5. runs the Docker-isolated desktop and mobile suite
+6. uploads the HTML report, JUnit file, screenshots, traces, and videos even after a failure
+
+A release is ready for delivery only after the existing backend, AI-service, and frontend checks, the production frontend build, and the `Playwright E2E` job all pass.
 
 ---
 
@@ -1036,4 +1162,4 @@ Then reopen Docker Desktop and retry.
 
 ## Project status
 
-The repository is self-contained for local Docker deployment and source-level development. It includes application code, runtime configuration, database migrations, production frontend assets, and automated component/service tests. No external SaaS dependency is required when `AI_PROVIDER=local`.
+The repository is self-contained for local Docker deployment and source-level development. It includes application code, runtime configuration, database migrations, production frontend assets, automated component and service tests, and a Docker-isolated Playwright release suite for authentication, authorization, modal regressions, knowledge ingestion and grounded retrieval, academic grading, reporting, and workflow state transitions. GitHub Actions executes the browser suite and preserves failure evidence. No external SaaS dependency is required when `AI_PROVIDER=local`.
